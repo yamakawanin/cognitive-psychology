@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cooper & Shepard (1973) 心理旋转实验</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg-a: #f8f5ef;
+      --bg-b: #e5edf4;
+      --ink: #111;
+      --muted: #5d6168;
+      --accent: #0f766e;
+      --error: #d62828;
+      --panel: rgba(255, 255, 255, 0.92);
+      --ring: #111;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 10% 10%, #ffffffcc 0%, transparent 70%),
+        radial-gradient(900px 600px at 90% 100%, #d7e6f8b8 0%, transparent 70%),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(1100px, 95vw);
+      min-height: min(90vh, 900px);
+      background: var(--panel);
+      border: 1px solid #d6dde6;
+      border-radius: 18px;
+      box-shadow: 0 20px 40px rgba(23, 30, 52, 0.12);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #e8edf2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .stage-wrap {
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      position: relative;
+    }
+
+    #stage {
+      width: min(780px, 92vw);
+      height: min(560px, 58vh);
+      border-radius: 12px;
+      background: #ffffffde;
+      border: 1px solid #e5ebf1;
+      transition: background 120ms ease;
+      position: relative;
+    }
+
+    #stage.error-flash {
+      background: #ffdede;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: linear-gradient(135deg, #ffffffdd, #f4f8fcf2);
+    }
+
+    .panel {
+      width: min(560px, 100%);
+      background: #ffffff;
+      border: 1px solid #d7e0ea;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 12px 26px rgba(24, 34, 58, 0.08);
+      animation: pop 300ms ease;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.2rem;
+    }
+
+    .hint {
+      margin: 6px 0 14px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .grid .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      font-size: 0.88rem;
+      color: #30353b;
+    }
+
+    input,
+    select,
+    button {
+      font: inherit;
+      border-radius: 9px;
+      border: 1px solid #c6d2df;
+      padding: 9px 11px;
+      background: #fff;
+    }
+
+    button {
+      cursor: pointer;
+      border-color: transparent;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+      transform: none;
+    }
+
+    .secondary {
+      background: #2d3a4b;
+    }
+
+    .footer {
+      padding: 12px 20px;
+      border-top: 1px solid #e8edf2;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .results {
+      width: min(1000px, 100%);
+      margin-top: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      background: #fff;
+      border: 1px solid #d7e0ea;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #e8edf2;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #f3f7fb;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    #chart {
+      border: 1px solid #d7e0ea;
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px;
+      min-height: 260px;
+    }
+
+    @keyframes pop {
+      from {
+        transform: translateY(8px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      #stage {
+        height: min(500px, 60vh);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="title">Cooper & Shepard (1973) Mental Rotation Task</div>
+      <div class="status" id="status">等待初始化</div>
+    </div>
+
+    <div class="stage-wrap">
+      <svg id="stage" viewBox="0 0 780 560" preserveAspectRatio="xMidYMid meet"></svg>
+
+      <div class="overlay" id="overlay">
+        <div class="panel">
+          <h2>实验初始化</h2>
+          <p class="hint">按 F 表示“正位 (Normal)”，按 J 表示“镜像 (Mirrored)”。请尽快且准确反应。</p>
+
+          <div class="grid">
+            <label>
+              被试编号
+              <input id="participantId" type="text" placeholder="例如 S001" required />
+            </label>
+
+            <label>
+              组别条件
+              <select id="condition" required>
+                <option value="N">N - 无信息 (No info)</option>
+                <option value="I">I - 仅告知字符 (Identity)</option>
+                <option value="O">O - 仅告知方位 (Orientation)</option>
+                <option value="B">B - 字符与方位分开 (Identity -> Arrow)</option>
+                <option value="C">C - 字符与方位结合 (Combined)</option>
+              </select>
+            </label>
+
+            <label>
+              每种字符×角度×朝向重复次数
+              <input id="repetitions" type="number" min="1" max="8" step="1" value="1" />
+            </label>
+
+            <label>
+              B 组可变间隔范围 (ms)
+              <input id="bInterval" type="text" value="500-1500" />
+            </label>
+
+            <div class="full" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
+              <button id="startBtn">开始实验</button>
+              <button class="secondary" id="demoBtn" type="button">仅查看 C 组预览样张</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="resultOverlay" style="display:none; align-items: start; overflow: auto;">
+        <div class="panel" style="width: min(980px, 100%);">
+          <h2>实验完成</h2>
+          <p class="hint" id="resultSummary"></p>
+          <div class="results">
+            <div id="chart"></div>
+            <div id="summaryTable"></div>
+            <div style="display:flex; gap:10px; flex-wrap: wrap;">
+              <button id="exportBtn">导出 CSV</button>
+              <button class="secondary" id="restartBtn">返回初始化面板</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div id="trialInfo">尚未开始</div>
+      <div>角度集合: 0° / 60° / 120° / 180° / 240° / 300°</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const WIDTH = 780;
+      const HEIGHT = 560;
+      const CX = WIDTH / 2;
+      const CY = HEIGHT / 2;
+      const RING_DIAMETER = 200;
+      const RING_RADIUS = RING_DIAMETER / 2;
+
+      const CHARS = ["R", "G", "J", "2", "5", "7"];
+      const ANGLES = [0, 60, 120, 180, 240, 300];
+      const KEY_MAP = { f: "Normal", j: "Mirrored" };
+
+      const FIXATION_MS = 500;
+      const ADVANCE_MS = 2000;
+      const ITI_MS = 450;
+      const FEEDBACK_MS = 180;
+
+      const state = {
+        participantId: "",
+        group: "N",
+        repetitions: 1,
+        bIntervalRange: [500, 1500],
+        trials: [],
+        trialIndex: -1,
+        currentTrial: null,
+        results: [],
+        awaitingResponse: false,
+        stimulusOnset: null,
+        started: false,
+        keyboardBound: false,
+        allowResponseFrom: 0
+      };
+
+      const stage = d3.select("#stage");
+      const root = stage.append("g").attr("transform", `translate(${CX}, ${CY})`);
+
+      const overlay = document.getElementById("overlay");
+      const resultOverlay = document.getElementById("resultOverlay");
+      const statusEl = document.getElementById("status");
+      const trialInfoEl = document.getElementById("trialInfo");
+      const resultSummaryEl = document.getElementById("resultSummary");
+      const summaryTableEl = document.getElementById("summaryTable");
+
+      const startBtn = document.getElementById("startBtn");
+      const demoBtn = document.getElementById("demoBtn");
+      const exportBtn = document.getElementById("exportBtn");
+      const restartBtn = document.getElementById("restartBtn");
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function setTrialInfo(text) {
+        trialInfoEl.textContent = text;
+      }
+
+      function clearStage() {
+        root.selectAll("*").remove();
+      }
+
+      function drawRing() {
+        root
+          .append("circle")
+          .attr("r", RING_RADIUS)
+          .attr("fill", "none")
+          .attr("stroke", "#111")
+          .attr("stroke-width", 3);
+      }
+
+      function drawFixation() {
+        clearStage();
+        root
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("font-size", 54)
+          .attr("font-family", "Arial, sans-serif")
+          .attr("font-weight", 700)
+          .text("+");
+      }
+
+      function drawCharacter(opts) {
+        const { ch, angle, orientation } = opts;
+        drawRing();
+
+        const mirrored = orientation === "Mirrored";
+        const scaleX = mirrored ? -1 : 1;
+        const transform = `rotate(${angle}) scale(${scaleX}, 1)`;
+
+        root
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("font-family", "Arial, sans-serif")
+          .attr("font-size", 80)
+          .attr("font-weight", 700)
+          .attr("transform", transform)
+          .text(ch);
+      }
+
+      function drawArrow(angle) {
+        drawRing();
+
+        const rad = (angle * Math.PI) / 180;
+        const x2 = Math.cos(rad) * (RING_RADIUS - 10);
+        const y2 = Math.sin(rad) * (RING_RADIUS - 10);
+
+        const defs = stage.select("defs").empty() ? stage.append("defs") : stage.select("defs");
+        if (defs.select("#arrowHead").empty()) {
+          defs
+            .append("marker")
+            .attr("id", "arrowHead")
+            .attr("viewBox", "0 0 10 10")
+            .attr("refX", 8)
+            .attr("refY", 5)
+            .attr("markerWidth", 7)
+            .attr("markerHeight", 7)
+            .attr("orient", "auto-start-reverse")
+            .append("path")
+            .attr("d", "M 0 0 L 10 5 L 0 10 z")
+            .attr("fill", "#111");
+        }
+
+        root
+          .append("line")
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", x2)
+          .attr("y2", y2)
+          .attr("stroke", "#111")
+          .attr("stroke-width", 4)
+          .attr("marker-end", "url(#arrowHead)");
+      }
+
+      function drawIdentityCue(ch) {
+        clearStage();
+        drawRing();
+        root
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("font-family", "Arial, sans-serif")
+          .attr("font-size", 80)
+          .attr("font-weight", 700)
+          .text(ch);
+      }
+
+      function drawCombinedCue(trial) {
+        clearStage();
+        drawCharacter({ ch: trial.char, angle: trial.angle, orientation: trial.orientation });
+      }
+
+      function shuffle(arr) {
+        const out = [...arr];
+        for (let i = out.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [out[i], out[j]] = [out[j], out[i]];
+        }
+        return out;
+      }
+
+      function parseBInterval(text) {
+        const m = String(text || "").trim().match(/^(\d+)\s*-\s*(\d+)$/);
+        if (!m) {
+          return [500, 1500];
+        }
+        const a = Number(m[1]);
+        const b = Number(m[2]);
+        if (!Number.isFinite(a) || !Number.isFinite(b)) {
+          return [500, 1500];
+        }
+        return [Math.min(a, b), Math.max(a, b)];
+      }
+
+      function randomInRange([min, max]) {
+        return Math.floor(min + Math.random() * (max - min + 1));
+      }
+
+      function buildTrials() {
+        const base = [];
+        for (let r = 0; r < state.repetitions; r++) {
+          for (const ch of CHARS) {
+            for (const angle of ANGLES) {
+              base.push({ char: ch, angle, orientation: "Normal" });
+              base.push({ char: ch, angle, orientation: "Mirrored" });
+            }
+          }
+        }
+        state.trials = shuffle(base).map((t, idx) => ({ ...t, index: idx + 1 }));
+      }
+
+      function shortestAngle(angle) {
+        return Math.min(angle, 360 - angle);
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function showFixation() {
+        setStatus("注视点");
+        clearStage();
+        drawFixation();
+        await wait(FIXATION_MS);
+      }
+
+      async function showAdvanceInfo(trial) {
+        setStatus("前行信息");
+        clearStage();
+
+        if (state.group === "N") {
+          await wait(250);
+          return;
+        }
+
+        if (state.group === "I") {
+          drawIdentityCue(trial.char);
+          await wait(ADVANCE_MS);
+          return;
+        }
+
+        if (state.group === "O") {
+          drawArrow(trial.angle);
+          await wait(ADVANCE_MS);
+          return;
+        }
+
+        if (state.group === "B") {
+          drawIdentityCue(trial.char);
+          await wait(ADVANCE_MS);
+
+          clearStage();
+          setStatus("B 组可变间隔");
+          await wait(randomInRange(state.bIntervalRange));
+
+          setStatus("B 组方位提示");
+          clearStage();
+          drawArrow(trial.angle);
+          await wait(ADVANCE_MS);
+          return;
+        }
+
+        if (state.group === "C") {
+          drawCombinedCue(trial);
+          await wait(ADVANCE_MS);
+        }
+      }
+
+      function showTestStimulus(trial) {
+        setStatus("测试刺激");
+        clearStage();
+        drawCharacter({ ch: trial.char, angle: trial.angle, orientation: trial.orientation });
+
+        // 将时间戳放到下一帧，尽量贴近视觉刺激实际可见时刻。
+        requestAnimationFrame(() => {
+          state.stimulusOnset = performance.now();
+          state.allowResponseFrom = state.stimulusOnset;
+          state.awaitingResponse = true;
+        });
+      }
+
+      function keyboardHandler(e) {
+        if (!state.started || !state.awaitingResponse) {
+          return;
+        }
+
+        const key = e.key.toLowerCase();
+        if (!(key in KEY_MAP)) {
+          return;
+        }
+
+        const responseTime = performance.now();
+        if (responseTime < state.allowResponseFrom) {
+          return;
+        }
+
+        const judgedOrientation = KEY_MAP[key];
+        const trial = state.currentTrial;
+
+        state.awaitingResponse = false;
+
+        const isCorrect = judgedOrientation === trial.orientation;
+        const rt = Math.max(0, responseTime - state.stimulusOnset);
+
+        state.results.push({
+          Subject_ID: state.participantId,
+          Group: state.group,
+          Angle: trial.angle,
+          Orientation: trial.orientation,
+          Is_Correct: isCorrect,
+          RT: Math.round(rt * 1000) / 1000,
+          Shortest_Angle: shortestAngle(trial.angle)
+        });
+
+        handlePostResponse(isCorrect);
+      }
+
+      async function flashError() {
+        const node = document.getElementById("stage");
+        node.classList.add("error-flash");
+        await wait(FEEDBACK_MS);
+        node.classList.remove("error-flash");
+      }
+
+      async function handlePostResponse(isCorrect) {
+        if (!isCorrect) {
+          await flashError();
+        }
+        await wait(ITI_MS);
+        runNextTrial();
+      }
+
+      async function runNextTrial() {
+        state.trialIndex += 1;
+
+        if (state.trialIndex >= state.trials.length) {
+          state.started = false;
+          setStatus("实验完成");
+          setTrialInfo(`已完成 ${state.results.length} 试次`);
+          showResults();
+          return;
+        }
+
+        const trial = state.trials[state.trialIndex];
+        state.currentTrial = trial;
+        setTrialInfo(`试次 ${state.trialIndex + 1} / ${state.trials.length}`);
+
+        await showFixation();
+        await showAdvanceInfo(trial);
+        showTestStimulus(trial);
+      }
+
+      function renderSummaryTable() {
+        const grouped = d3.rollup(
+          state.results,
+          (rows) => {
+            const correctRows = rows.filter((r) => r.Is_Correct);
+            return {
+              n: rows.length,
+              acc: rows.length ? d3.mean(rows, (d) => (d.Is_Correct ? 1 : 0)) : 0,
+              rt: correctRows.length ? d3.mean(correctRows, (d) => d.RT) : NaN
+            };
+          },
+          (d) => d.Angle
+        );
+
+        const rows = ANGLES.map((angle) => {
+          const g = grouped.get(angle) || { n: 0, acc: 0, rt: NaN };
+          return {
+            angle,
+            n: g.n,
+            acc: `${(g.acc * 100).toFixed(1)}%`,
+            rt: Number.isFinite(g.rt) ? `${g.rt.toFixed(2)} ms` : "-"
+          };
+        });
+
+        const html = [
+          "<table>",
+          "<thead><tr><th>Angle</th><th>Trials</th><th>Accuracy</th><th>Mean RT (Correct)</th></tr></thead>",
+          "<tbody>",
+          ...rows.map((r) => `<tr><td>${r.angle}</td><td>${r.n}</td><td>${r.acc}</td><td>${r.rt}</td></tr>`),
+          "</tbody>",
+          "</table>"
+        ].join("");
+
+        summaryTableEl.innerHTML = html;
+      }
+
+      function renderRtChart() {
+        const chartEl = document.getElementById("chart");
+        chartEl.innerHTML = "";
+
+        const data = ANGLES.map((angle) => {
+          const rows = state.results.filter((d) => d.Angle === angle && d.Is_Correct);
+          return {
+            angle,
+            rt: rows.length ? d3.mean(rows, (d) => d.RT) : NaN
+          };
+        });
+
+        const margin = { top: 26, right: 24, bottom: 44, left: 58 };
+        const width = Math.min(chartEl.clientWidth || 900, 920) - margin.left - margin.right;
+        const height = 240 - margin.top - margin.bottom;
+
+        const svg = d3
+          .select(chartEl)
+          .append("svg")
+          .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+          .attr("width", "100%")
+          .attr("height", "100%");
+
+        const g = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        const valid = data.filter((d) => Number.isFinite(d.rt));
+        const maxRt = valid.length ? d3.max(valid, (d) => d.rt) : 1000;
+        const minRt = valid.length ? d3.min(valid, (d) => d.rt) : 0;
+
+        const yPad = Math.max(30, (maxRt - minRt) * 0.15);
+
+        const x = d3.scalePoint().domain(ANGLES).range([0, width]);
+        const y = d3
+          .scaleLinear()
+          .domain([Math.max(0, minRt - yPad), maxRt + yPad])
+          .nice()
+          .range([height, 0]);
+
+        g.append("g").attr("transform", `translate(0, ${height})`).call(d3.axisBottom(x));
+        g.append("g").call(d3.axisLeft(y));
+
+        g.append("text")
+          .attr("x", width / 2)
+          .attr("y", height + 36)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#374151")
+          .attr("font-size", 12)
+          .text("Angle (degree)");
+
+        g.append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -height / 2)
+          .attr("y", -40)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#374151")
+          .attr("font-size", 12)
+          .text("RT (ms)");
+
+        const line = d3
+          .line()
+          .defined((d) => Number.isFinite(d.rt))
+          .x((d) => x(d.angle))
+          .y((d) => y(d.rt));
+
+        g.append("path")
+          .datum(data)
+          .attr("fill", "none")
+          .attr("stroke", "#0f766e")
+          .attr("stroke-width", 2.5)
+          .attr("d", line);
+
+        g.selectAll("circle.point")
+          .data(valid)
+          .enter()
+          .append("circle")
+          .attr("class", "point")
+          .attr("cx", (d) => x(d.angle))
+          .attr("cy", (d) => y(d.rt))
+          .attr("r", 4.5)
+          .attr("fill", "#0f766e");
+
+        g.append("text")
+          .attr("x", 0)
+          .attr("y", -8)
+          .attr("font-size", 13)
+          .attr("fill", "#111")
+          .attr("font-weight", 700)
+          .text("反应时 vs 旋转角度（仅正确反应）");
+      }
+
+      function csvEscape(value) {
+        const s = String(value);
+        if (s.includes(",") || s.includes("\n") || s.includes("\"")) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      }
+
+      function toCsv(records) {
+        const headers = [
+          "Subject_ID",
+          "Group",
+          "Angle",
+          "Orientation",
+          "Is_Correct",
+          "RT",
+          "Shortest_Angle"
+        ];
+
+        const lines = [headers.join(",")];
+        for (const r of records) {
+          lines.push(headers.map((h) => csvEscape(r[h])).join(","));
+        }
+        return lines.join("\n");
+      }
+
+      function downloadCsv() {
+        if (!state.results.length) {
+          return;
+        }
+        const csv = toCsv(state.results);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const safeId = state.participantId.replace(/[^a-zA-Z0-9_-]/g, "_") || "participant";
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        a.href = url;
+        a.download = `cooper-shepard_${safeId}_${state.group}_${ts}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function showResults() {
+        const total = state.results.length;
+        const acc = total ? d3.mean(state.results, (d) => (d.Is_Correct ? 1 : 0)) : 0;
+        const rtRows = state.results.filter((d) => d.Is_Correct);
+        const meanRt = rtRows.length ? d3.mean(rtRows, (d) => d.RT) : NaN;
+
+        resultSummaryEl.textContent = [
+          `被试: ${state.participantId}`,
+          `组别: ${state.group}`,
+          `总试次: ${total}`,
+          `正确率: ${(acc * 100).toFixed(1)}%`,
+          `正确反应平均 RT: ${Number.isFinite(meanRt) ? `${meanRt.toFixed(2)} ms` : "-"}`
+        ].join(" | ");
+
+        renderRtChart();
+        renderSummaryTable();
+        resultOverlay.style.display = "grid";
+      }
+
+      function resetExperimentState() {
+        state.trials = [];
+        state.results = [];
+        state.trialIndex = -1;
+        state.currentTrial = null;
+        state.awaitingResponse = false;
+        state.stimulusOnset = null;
+        state.started = false;
+        setStatus("等待初始化");
+        setTrialInfo("尚未开始");
+        clearStage();
+      }
+
+      function beginExperiment() {
+        const participantId = document.getElementById("participantId").value.trim();
+        const condition = document.getElementById("condition").value;
+        const repetitions = Number(document.getElementById("repetitions").value);
+        const bIntervalText = document.getElementById("bInterval").value;
+
+        if (!participantId) {
+          alert("请输入被试编号");
+          return;
+        }
+
+        if (!Number.isInteger(repetitions) || repetitions < 1) {
+          alert("重复次数必须是 >= 1 的整数");
+          return;
+        }
+
+        resetExperimentState();
+
+        state.participantId = participantId;
+        state.group = condition;
+        state.repetitions = repetitions;
+        state.bIntervalRange = parseBInterval(bIntervalText);
+
+        buildTrials();
+        overlay.style.display = "none";
+        resultOverlay.style.display = "none";
+        state.started = true;
+
+        if (!state.keyboardBound) {
+          state.keyboardBound = true;
+          window.addEventListener("keydown", keyboardHandler, { passive: true });
+        }
+
+        setStatus(`进行中 | Group ${state.group}`);
+        runNextTrial();
+      }
+
+      function showCombinedDemo() {
+        const sample = {
+          char: CHARS[Math.floor(Math.random() * CHARS.length)],
+          angle: ANGLES[Math.floor(Math.random() * ANGLES.length)],
+          orientation: Math.random() < 0.5 ? "Normal" : "Mirrored"
+        };
+        clearStage();
+        drawCombinedCue(sample);
+        setStatus("C 组预览样张");
+      }
+
+      function restartToInit() {
+        resetExperimentState();
+        resultOverlay.style.display = "none";
+        overlay.style.display = "grid";
+      }
+
+      startBtn.addEventListener("click", beginExperiment);
+      demoBtn.addEventListener("click", showCombinedDemo);
+      exportBtn.addEventListener("click", downloadCsv);
+      restartBtn.addEventListener("click", restartToInit);
+
+      drawFixation();
+      setTrialInfo("准备就绪，请初始化实验");
+    })();
+  </script>
+</body>
+</html>
