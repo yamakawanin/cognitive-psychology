@@ -3,18 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cooper & Shepard (1973) 心理旋转实验</title>
+  <title>Mental Rotation Experiment</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     :root {
-      --bg-a: #f8f5ef;
-      --bg-b: #e5edf4;
-      --ink: #111;
-      --muted: #5d6168;
-      --accent: #0f766e;
-      --error: #d62828;
-      --panel: rgba(255, 255, 255, 0.92);
-      --ring: #111;
+      --bg: #f4f1e8;
+      --panel: #fffdf8;
+      --paper: #fff;
+      --ink: #1f2933;
+      --muted: #5c6670;
+      --line: #dde3ea;
+      --accent: #0d7a73;
+      --accent-2: #165d8c;
+      --danger: #c53232;
+      --tab-off: #dde6ef;
+      --tab-on: #162635;
     }
 
     * {
@@ -24,128 +27,107 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--ink);
+      font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
       background:
-        radial-gradient(1200px 700px at 10% 10%, #ffffffcc 0%, transparent 70%),
-        radial-gradient(900px 600px at 90% 100%, #d7e6f8b8 0%, transparent 70%),
-        linear-gradient(135deg, var(--bg-a), var(--bg-b));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
+        radial-gradient(1200px 700px at 12% 10%, #fff 0%, transparent 60%),
+        radial-gradient(900px 600px at 90% 90%, #d6e6f6 0%, transparent 60%),
+        linear-gradient(135deg, #efe9da, #e3edf7);
+      padding: 18px;
     }
 
     .app {
-      width: min(1100px, 95vw);
-      min-height: min(90vh, 900px);
+      width: min(1220px, 100%);
+      min-height: calc(100vh - 36px);
+      margin: 0 auto;
       background: var(--panel);
-      border: 1px solid #d6dde6;
+      border: 1px solid #d3dde8;
       border-radius: 18px;
-      box-shadow: 0 20px 40px rgba(23, 30, 52, 0.12);
+      box-shadow: 0 18px 36px rgba(19, 34, 58, 0.12);
       display: grid;
       grid-template-rows: auto 1fr auto;
       overflow: hidden;
-      position: relative;
     }
 
-    .header {
-      padding: 14px 20px;
-      border-bottom: 1px solid #e8edf2;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fbff;
+    }
+
+    .tab-btn {
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      padding: 12px 8px;
+      background: var(--tab-off);
+      color: #27313a;
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+    }
+
+    .tab-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .tab-btn.active {
+      background: var(--tab-on);
+      color: #fff;
+    }
+
+    .pages {
+      overflow: auto;
+      padding: 16px;
+    }
+
+    .page {
+      display: none;
+      animation: fadeIn 240ms ease;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 6px 16px rgba(27, 37, 52, 0.08);
     }
 
     .title {
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      margin: 0;
+      font-size: 1.3rem;
     }
 
-    .status {
-      font-size: 0.9rem;
+    .muted {
       color: var(--muted);
     }
 
-    .stage-wrap {
-      display: grid;
-      place-items: center;
-      padding: 16px;
-      position: relative;
-    }
-
-    #stage {
-      width: min(780px, 92vw);
-      height: min(560px, 58vh);
-      border-radius: 12px;
-      background: #ffffffde;
-      border: 1px solid #e5ebf1;
-      transition: background 120ms ease;
-      position: relative;
-    }
-
-    #stage.error-flash {
-      background: #ffdede;
-    }
-
-    .overlay {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 22px;
-      background: linear-gradient(135deg, #ffffffdd, #f4f8fcf2);
-    }
-
-    .panel {
-      width: min(560px, 100%);
-      background: #ffffff;
-      border: 1px solid #d7e0ea;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 12px 26px rgba(24, 34, 58, 0.08);
-      animation: pop 300ms ease;
-    }
-
-    .panel h2 {
-      margin: 0 0 14px;
-      font-size: 1.2rem;
-    }
-
-    .hint {
-      margin: 6px 0 14px;
-      font-size: 0.92rem;
-      color: var(--muted);
-      line-height: 1.4;
-    }
-
-    .grid {
-      display: grid;
+    .inline-row {
+      display: flex;
       gap: 10px;
-      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
-    .grid .full {
-      grid-column: 1 / -1;
+    .space-top {
+      margin-top: 14px;
     }
 
-    label {
-      display: grid;
-      gap: 5px;
-      font-size: 0.88rem;
-      color: #30353b;
-    }
-
+    button,
     input,
-    select,
-    button {
+    select {
       font: inherit;
-      border-radius: 9px;
-      border: 1px solid #c6d2df;
-      padding: 9px 11px;
+      border-radius: 10px;
+      border: 1px solid #c7d4e2;
+      padding: 9px 12px;
       background: #fff;
     }
 
@@ -163,588 +145,1090 @@
       filter: brightness(1.04);
     }
 
+    button.secondary {
+      background: #334a60;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
     button:disabled {
-      cursor: not-allowed;
       opacity: 0.65;
+      cursor: not-allowed;
       transform: none;
     }
 
-    .secondary {
-      background: #2d3a4b;
-    }
-
-    .footer {
-      padding: 12px 20px;
-      border-top: 1px solid #e8edf2;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
-
-    .results {
-      width: min(1000px, 100%);
-      margin-top: 12px;
+    .examples-grid {
+      margin-top: 14px;
       display: grid;
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-      background: #fff;
-      border: 1px solid #d7e0ea;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    th,
-    td {
-      border-bottom: 1px solid #e8edf2;
-      padding: 8px 10px;
-      text-align: center;
-    }
-
-    th {
-      background: #f3f7fb;
-      font-weight: 700;
-    }
-
-    tr:last-child td {
-      border-bottom: 0;
-    }
-
-    #chart {
-      border: 1px solid #d7e0ea;
+    .example-item {
+      border: 1px solid var(--line);
       border-radius: 10px;
       background: #fff;
       padding: 8px;
-      min-height: 260px;
+      text-align: center;
+      font-size: 0.84rem;
+      color: #35414d;
     }
 
-    @keyframes pop {
+    .example-item svg {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .exp-layout {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 360px 1fr;
+      align-items: start;
+    }
+
+    .stimulus-panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    #warmupStage,
+    #formalStage {
+      width: 100%;
+      height: auto;
+      border: 1px solid #e4ebf2;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .btn-row {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .big-center {
+      min-height: 70px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-weight: 700;
+      color: #2e3945;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
+      margin-top: 12px;
+    }
+
+    .form-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .right-top {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .prompt-box {
+      margin-top: 12px;
+      min-height: 120px;
+      display: grid;
+      gap: 10px;
+      align-content: center;
+      text-align: center;
+      border: 1px dashed #c6d5e4;
+      border-radius: 12px;
+      padding: 16px;
+      background: #f8fbff;
+    }
+
+    .status-chip {
+      display: inline-block;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent-2);
+    }
+
+    #overviewChart {
+      width: 100%;
+      min-height: 300px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .id-panels {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
+    }
+
+    .id-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .id-chart {
+      width: 100%;
+      min-height: 220px;
+      border: 1px solid #e5ebf2;
+      border-radius: 10px;
+      margin-top: 8px;
+      padding: 6px;
+    }
+
+    .cond-actions {
+      margin-top: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .cond-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #ecf1f6;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 0.86rem;
+    }
+
+    .footer {
+      padding: 10px 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    @keyframes fadeIn {
       from {
-        transform: translateY(8px);
         opacity: 0;
+        transform: translateY(4px);
       }
       to {
-        transform: translateY(0);
         opacity: 1;
+        transform: translateY(0);
       }
     }
 
-    @media (max-width: 760px) {
-      .grid {
+    @media (max-width: 980px) {
+      .exp-layout {
         grid-template-columns: 1fr;
       }
 
-      #stage {
-        height: min(500px, 60vh);
+      .tabs {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .examples-grid {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <div class="header">
-      <div class="title">Cooper & Shepard (1973) Mental Rotation Task</div>
-      <div class="status" id="status">等待初始化</div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="instructions">Experiment instructions</button>
+      <button class="tab-btn" data-tab="warmup">Warm-up training</button>
+      <button class="tab-btn" data-tab="formal">Formal experiment</button>
+      <button class="tab-btn" data-tab="data">Experimental data</button>
     </div>
 
-    <div class="stage-wrap">
-      <svg id="stage" viewBox="0 0 780 560" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="pages">
+      <section class="page active" id="page-instructions">
+        <div class="card">
+          <h1 class="title">Experiment instructions</h1>
+          <p class="muted">
+            显示屏上会闪现出字符或数字的不同形态，旋转角度以60°为单位，共六种；此外，字符和数字可能以正面或反面出现，共两种。一共有12种组合。
+            被试需要尽可能快地对正面/反面做出判断反应，并点击选项，正面选择F（正位），反面选择J（镜像），以下为示例图：
+          </p>
+          <div id="instructionExamples" class="examples-grid"></div>
+        </div>
+      </section>
 
-      <div class="overlay" id="overlay">
-        <div class="panel">
-          <h2>实验初始化</h2>
-          <p class="hint">按 F 表示“正位 (Normal)”，按 J 表示“镜像 (Mirrored)”。请尽快且准确反应。</p>
+      <section class="page" id="page-warmup">
+        <div class="exp-layout">
+          <div class="card">
+            <h2 class="title">Warm-up training</h2>
+            <p class="muted">共12题：示例字符 R 的 6 个角度 × 正面/反面。反应时从刺激出现到点击 F/J 计算。</p>
+            <div class="space-top">
+              <div>进度：<span id="warmupProgress">未开始</span></div>
+              <div>上一题反应时：<span id="warmupLastRt">-</span></div>
+            </div>
+            <div class="btn-row space-top">
+              <button id="warmupStartBtn">start training</button>
+              <button id="warmupReturnBtn" class="secondary" style="display:none;">return</button>
+            </div>
+          </div>
 
-          <div class="grid">
+          <div class="stimulus-panel">
+            <svg id="warmupStage" viewBox="0 0 760 440" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="big-center" id="warmupMessage">点击 start training 开始</div>
+            <div class="btn-row" id="warmupButtons"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-formal">
+        <div class="card" id="formalSetupCard">
+          <h2 class="title">Formal experiment</h2>
+          <p class="muted">先完成初始化设置，再进入提示页与正式流程。</p>
+          <div class="form-grid">
             <label>
-              被试编号
-              <input id="participantId" type="text" placeholder="例如 S001" required />
+              Participant ID
+              <input id="participantIdInput" type="text" placeholder="例如 P001" />
             </label>
-
             <label>
-              组别条件
-              <select id="condition" required>
-                <option value="N">N - 无信息 (No info)</option>
-                <option value="I">I - 仅告知字符 (Identity)</option>
-                <option value="O">O - 仅告知方位 (Orientation)</option>
-                <option value="B">B - 字符与方位分开 (Identity -> Arrow)</option>
-                <option value="C">C - 字符与方位结合 (Combined)</option>
+              Condition
+              <select id="conditionInput">
+                <option value="N">N: 直接给予刺激</option>
+                <option value="I">I: 提前告知字符是什么</option>
+                <option value="O">O: 提前告知字符的旋转朝向</option>
+                <option value="B">B: 提前告知字符与旋转朝向(分开呈现)</option>
+                <option value="C">C: 提前告知字符与旋转朝向（同时呈现）</option>
               </select>
             </label>
-
-            <label>
-              每种字符×角度×朝向重复次数
-              <input id="repetitions" type="number" min="1" max="8" step="1" value="1" />
-            </label>
-
-            <label>
-              B 组可变间隔范围 (ms)
-              <input id="bInterval" type="text" value="500-1500" />
-            </label>
-
-            <div class="full" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
-              <button id="startBtn">开始实验</button>
-              <button class="secondary" id="demoBtn" type="button">仅查看 C 组预览样张</button>
+            <div class="full inline-row">
+              <button id="enterFormalBtn">enter</button>
+              <span id="setupHint" class="muted"></span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="overlay" id="resultOverlay" style="display:none; align-items: start; overflow: auto;">
-        <div class="panel" style="width: min(980px, 100%);">
-          <h2>实验完成</h2>
-          <p class="hint" id="resultSummary"></p>
-          <div class="results">
-            <div id="chart"></div>
-            <div id="summaryTable"></div>
-            <div style="display:flex; gap:10px; flex-wrap: wrap;">
-              <button id="exportBtn">导出 CSV</button>
-              <button class="secondary" id="restartBtn">返回初始化面板</button>
+        <div class="card" id="formalPromptCard" style="display:none; margin-top:12px;">
+          <div class="right-top">
+            <button id="formalResetTopBtn" class="secondary">Return to reset</button>
+          </div>
+          <div class="prompt-box">
+            <div class="status-chip">Prompt</div>
+            <div id="formalPromptText"></div>
+            <div><button id="formalPromptOkBtn">OK</button></div>
+          </div>
+        </div>
+
+        <div class="card" id="formalRunCard" style="display:none; margin-top:12px;">
+          <div class="right-top">
+            <button id="formalResetRunBtn" class="secondary">Return to reset</button>
+          </div>
+          <div class="exp-layout" style="margin-top:8px;">
+            <div>
+              <div class="card" style="padding:12px;">
+                <div id="formalProgress">尚未开始</div>
+                <div class="space-top">当前块：<span id="formalCharacterLabel">-</span></div>
+                <div>提示模式：<span id="formalModeLabel">-</span></div>
+                <div>上一题反应时：<span id="formalLastRt">-</span></div>
+              </div>
+            </div>
+            <div class="stimulus-panel">
+              <svg id="formalStage" viewBox="0 0 760 440" preserveAspectRatio="xMidYMid meet"></svg>
+              <div class="big-center" id="formalMessage">请先完成上方初始化</div>
+              <div class="btn-row" id="formalButtons"></div>
+              <div class="btn-row" id="formalDoneArea" style="display:none; margin-top:12px;">
+                <button id="viewDataBtn">View data</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section class="page" id="page-data">
+        <div class="card">
+          <h2 class="title">Experimental data</h2>
+          <p class="muted">总视图显示五种条件在不同旋转角度的平均反应时（只统计正确反应）。下面按 Participant ID 聚合展示并支持按条件导出/删除。</p>
+          <div id="overviewChart"></div>
+          <div id="idPanels" class="id-panels"></div>
+        </div>
+      </section>
     </div>
 
     <div class="footer">
-      <div id="trialInfo">尚未开始</div>
-      <div>角度集合: 0° / 60° / 120° / 180° / 240° / 300°</div>
+      <div id="globalStatus">Ready</div>
+      <div>Angles: 0° / 60° / 120° / 180° / 240° / 300°</div>
     </div>
   </div>
 
   <script>
     (function () {
-      const WIDTH = 780;
-      const HEIGHT = 560;
-      const CX = WIDTH / 2;
-      const CY = HEIGHT / 2;
-      const RING_DIAMETER = 200;
-      const RING_RADIUS = RING_DIAMETER / 2;
-
       const CHARS = ["R", "G", "J", "2", "5", "7"];
       const ANGLES = [0, 60, 120, 180, 240, 300];
-      const KEY_MAP = { f: "Normal", j: "Mirrored" };
+      const ORIENTATIONS = ["F", "J"];
+      const CONDITIONS = ["N", "I", "O", "B", "C"];
+      const STORAGE_KEY = "rotation_experiment_records_v1";
 
-      const FIXATION_MS = 500;
-      const ADVANCE_MS = 2000;
-      const ITI_MS = 450;
-      const FEEDBACK_MS = 180;
-
-      const state = {
-        participantId: "",
-        group: "N",
-        repetitions: 1,
-        bIntervalRange: [500, 1500],
-        trials: [],
-        trialIndex: -1,
-        currentTrial: null,
-        results: [],
-        awaitingResponse: false,
-        stimulusOnset: null,
-        started: false,
-        keyboardBound: false,
-        allowResponseFrom: 0
+      const CONDITION_TEXT = {
+        N: "字符将会直接出现。",
+        I: "你将会被提前告知字符是什么。",
+        O: "你将会被提前告知字符的旋转朝向。",
+        B: "你将会被提前告知字符与旋转朝向(分开呈现)。",
+        C: "你将会被提前告知字符与旋转朝向（同时呈现）。"
       };
 
-      const stage = d3.select("#stage");
-      const root = stage.append("g").attr("transform", `translate(${CX}, ${CY})`);
+      const conditionColor = d3
+        .scaleOrdinal()
+        .domain(CONDITIONS)
+        .range(["#0d7a73", "#165d8c", "#e07a2f", "#7d5ba6", "#bf3f5f"]);
 
-      const overlay = document.getElementById("overlay");
-      const resultOverlay = document.getElementById("resultOverlay");
-      const statusEl = document.getElementById("status");
-      const trialInfoEl = document.getElementById("trialInfo");
-      const resultSummaryEl = document.getElementById("resultSummary");
-      const summaryTableEl = document.getElementById("summaryTable");
+      const globalStatus = document.getElementById("globalStatus");
+      const tabButtons = Array.from(document.querySelectorAll(".tab-btn"));
+      const pages = {
+        instructions: document.getElementById("page-instructions"),
+        warmup: document.getElementById("page-warmup"),
+        formal: document.getElementById("page-formal"),
+        data: document.getElementById("page-data")
+      };
 
-      const startBtn = document.getElementById("startBtn");
-      const demoBtn = document.getElementById("demoBtn");
-      const exportBtn = document.getElementById("exportBtn");
-      const restartBtn = document.getElementById("restartBtn");
+      const warmup = {
+        stage: d3.select("#warmupStage"),
+        root: null,
+        progressEl: document.getElementById("warmupProgress"),
+        messageEl: document.getElementById("warmupMessage"),
+        buttonsEl: document.getElementById("warmupButtons"),
+        startBtn: document.getElementById("warmupStartBtn"),
+        returnBtn: document.getElementById("warmupReturnBtn"),
+        lastRtEl: document.getElementById("warmupLastRt"),
+        trials: [],
+        index: -1,
+        awaiting: false,
+        onset: 0,
+        done: false
+      };
 
-      function setStatus(text) {
-        statusEl.textContent = text;
+      const formal = {
+        stage: d3.select("#formalStage"),
+        root: null,
+        setupCard: document.getElementById("formalSetupCard"),
+        promptCard: document.getElementById("formalPromptCard"),
+        runCard: document.getElementById("formalRunCard"),
+        participantInput: document.getElementById("participantIdInput"),
+        conditionInput: document.getElementById("conditionInput"),
+        setupHint: document.getElementById("setupHint"),
+        promptText: document.getElementById("formalPromptText"),
+        progressEl: document.getElementById("formalProgress"),
+        characterLabelEl: document.getElementById("formalCharacterLabel"),
+        modeLabelEl: document.getElementById("formalModeLabel"),
+        messageEl: document.getElementById("formalMessage"),
+        buttonsEl: document.getElementById("formalButtons"),
+        doneArea: document.getElementById("formalDoneArea"),
+        viewDataBtn: document.getElementById("viewDataBtn"),
+        lastRtEl: document.getElementById("formalLastRt"),
+        participantId: "",
+        condition: "N",
+        charOrder: [],
+        charIndex: 0,
+        trialOrder: [],
+        trialIndex: -1,
+        phase: "idle",
+        awaiting: false,
+        onset: 0,
+        activeStimulus: null,
+        responses: [],
+        currentInformationTrial: null,
+        startedAt: ""
+      };
+
+      function setGlobalStatus(text) {
+        globalStatus.textContent = text;
       }
 
-      function setTrialInfo(text) {
-        trialInfoEl.textContent = text;
+      function shuffle(input) {
+        const arr = input.slice();
+        for (let i = arr.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = arr[i];
+          arr[i] = arr[j];
+          arr[j] = tmp;
+        }
+        return arr;
       }
 
-      function clearStage() {
-        root.selectAll("*").remove();
+      function clearSvg(svgRoot) {
+        svgRoot.selectAll("*").remove();
       }
 
-      function drawRing() {
+      function createRoot(svgSel) {
+        clearSvg(svgSel);
+        return svgSel.append("g").attr("transform", "translate(380,220)");
+      }
+
+      function drawRing(root) {
         root
           .append("circle")
-          .attr("r", RING_RADIUS)
+          .attr("r", 105)
           .attr("fill", "none")
-          .attr("stroke", "#111")
+          .attr("stroke", "#1f2933")
           .attr("stroke-width", 3);
       }
 
-      function drawFixation() {
-        clearStage();
+      function drawTextStimulus(root, ch, angle, orientationCode) {
+        drawRing(root);
+        const mirrored = orientationCode === "J";
         root
           .append("text")
           .attr("text-anchor", "middle")
           .attr("dominant-baseline", "middle")
-          .attr("font-size", 54)
-          .attr("font-family", "Arial, sans-serif")
+          .attr("font-size", 86)
           .attr("font-weight", 700)
-          .text("+");
-      }
-
-      function drawCharacter(opts) {
-        const { ch, angle, orientation } = opts;
-        drawRing();
-
-        const mirrored = orientation === "Mirrored";
-        const scaleX = mirrored ? -1 : 1;
-        const transform = `rotate(${angle}) scale(${scaleX}, 1)`;
-
-        root
-          .append("text")
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "middle")
-          .attr("font-family", "Arial, sans-serif")
-          .attr("font-size", 80)
-          .attr("font-weight", 700)
-          .attr("transform", transform)
+          .attr("font-family", "Avenir Next, PingFang SC, sans-serif")
+          .attr("transform", `rotate(${angle}) scale(${mirrored ? -1 : 1},1)`)
           .text(ch);
       }
 
-      function drawArrow(angle) {
-        drawRing();
-
-        const rad = (angle * Math.PI) / 180;
-        const x2 = Math.cos(rad) * (RING_RADIUS - 10);
-        const y2 = Math.sin(rad) * (RING_RADIUS - 10);
-
-        const defs = stage.select("defs").empty() ? stage.append("defs") : stage.select("defs");
-        if (defs.select("#arrowHead").empty()) {
+      function ensureArrowMarker(svgSel, markerId) {
+        const defs = svgSel.select("defs").empty() ? svgSel.append("defs") : svgSel.select("defs");
+        if (defs.select(`#${markerId}`).empty()) {
           defs
             .append("marker")
-            .attr("id", "arrowHead")
+            .attr("id", markerId)
             .attr("viewBox", "0 0 10 10")
             .attr("refX", 8)
             .attr("refY", 5)
             .attr("markerWidth", 7)
             .attr("markerHeight", 7)
-            .attr("orient", "auto-start-reverse")
+            .attr("orient", "auto")
             .append("path")
             .attr("d", "M 0 0 L 10 5 L 0 10 z")
-            .attr("fill", "#111");
+            .attr("fill", "#1f2933");
         }
+      }
 
+      function drawArrowCue(svgSel, root, angle) {
+        drawRing(root);
+        ensureArrowMarker(svgSel, "arrowMarkerMain");
+        const rad = (angle * Math.PI) / 180;
+        const x2 = Math.cos(rad) * 95;
+        const y2 = Math.sin(rad) * 95;
         root
           .append("line")
           .attr("x1", 0)
           .attr("y1", 0)
           .attr("x2", x2)
           .attr("y2", y2)
-          .attr("stroke", "#111")
+          .attr("stroke", "#1f2933")
           .attr("stroke-width", 4)
-          .attr("marker-end", "url(#arrowHead)");
+          .attr("marker-end", "url(#arrowMarkerMain)");
       }
 
-      function drawIdentityCue(ch) {
-        clearStage();
-        drawRing();
+      function drawIdentityCue(root, ch) {
+        drawRing(root);
         root
           .append("text")
           .attr("text-anchor", "middle")
           .attr("dominant-baseline", "middle")
-          .attr("font-family", "Arial, sans-serif")
-          .attr("font-size", 80)
+          .attr("font-size", 86)
           .attr("font-weight", 700)
+          .attr("font-family", "Avenir Next, PingFang SC, sans-serif")
           .text(ch);
       }
 
-      function drawCombinedCue(trial) {
-        clearStage();
-        drawCharacter({ ch: trial.char, angle: trial.angle, orientation: trial.orientation });
+      function drawCenteredText(root, text, size) {
+        root
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("font-size", size || 42)
+          .attr("font-weight", 700)
+          .attr("font-family", "Avenir Next, PingFang SC, sans-serif")
+          .text(text);
       }
 
-      function shuffle(arr) {
-        const out = [...arr];
-        for (let i = out.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [out[i], out[j]] = [out[j], out[i]];
+      function switchTab(name) {
+        tabButtons.forEach((btn) => {
+          const active = btn.dataset.tab === name;
+          btn.classList.toggle("active", active);
+        });
+
+        Object.entries(pages).forEach(([k, el]) => {
+          el.classList.toggle("active", k === name);
+        });
+
+        if (name === "data") {
+          renderDataDashboard();
         }
+      }
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+      });
+
+      function renderInstructionExamples() {
+        const wrap = document.getElementById("instructionExamples");
+        wrap.innerHTML = "";
+
+        const combos = [];
+        ANGLES.forEach((angle) => {
+          combos.push({ angle, orientation: "F" });
+          combos.push({ angle, orientation: "J" });
+        });
+
+        combos.forEach((combo) => {
+          const item = document.createElement("div");
+          item.className = "example-item";
+          const svg = d3
+            .create("svg")
+            .attr("viewBox", "0 0 140 140")
+            .attr("preserveAspectRatio", "xMidYMid meet");
+
+          const g = svg.append("g").attr("transform", "translate(70,70)");
+          g.append("circle").attr("r", 48).attr("fill", "none").attr("stroke", "#2f3a46").attr("stroke-width", 2.2);
+          g
+            .append("text")
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .attr("font-size", 48)
+            .attr("font-weight", 700)
+            .attr("font-family", "Avenir Next, PingFang SC, sans-serif")
+            .attr("transform", `rotate(${combo.angle}) scale(${combo.orientation === "J" ? -1 : 1},1)`)
+            .text("R");
+
+          item.appendChild(svg.node());
+          const label = document.createElement("div");
+          label.textContent = `${combo.orientation === "F" ? "正面(F)" : "反面(J)"} · ${combo.angle}°`;
+          item.appendChild(label);
+          wrap.appendChild(item);
+        });
+      }
+
+      function buildWarmupTrials() {
+        const base = [];
+        ANGLES.forEach((angle) => {
+          ORIENTATIONS.forEach((orientation) => {
+            base.push({ char: "R", angle, orientation });
+          });
+        });
+        return shuffle(base);
+      }
+
+      function setWarmupButtons(buttons) {
+        warmup.buttonsEl.innerHTML = "";
+        buttons.forEach((cfg) => {
+          const b = document.createElement("button");
+          b.textContent = cfg.text;
+          if (cfg.className) {
+            b.className = cfg.className;
+          }
+          b.disabled = !!cfg.disabled;
+          b.addEventListener("click", cfg.onClick);
+          warmup.buttonsEl.appendChild(b);
+        });
+      }
+
+      function warmupShowReady() {
+        warmup.awaiting = false;
+        warmup.messageEl.textContent = "ready";
+        setWarmupButtons([
+          {
+            text: "ready",
+            onClick: warmupPresentStimulus
+          }
+        ]);
+      }
+
+      function warmupPresentStimulus() {
+        if (warmup.done) {
+          return;
+        }
+        const trial = warmup.trials[warmup.index];
+        warmup.root = createRoot(warmup.stage);
+        drawTextStimulus(warmup.root, trial.char, trial.angle, trial.orientation);
+        warmup.messageEl.textContent = `请判断：正位(F) 或 镜像(J)`;
+
+        setWarmupButtons([
+          { text: "F", onClick: () => warmupRespond("F") },
+          { text: "J", onClick: () => warmupRespond("J") }
+        ]);
+
+        requestAnimationFrame(() => {
+          warmup.onset = performance.now();
+          warmup.awaiting = true;
+        });
+      }
+
+      function warmupRespond(choice) {
+        if (!warmup.awaiting) {
+          return;
+        }
+
+        const now = performance.now();
+        const trial = warmup.trials[warmup.index];
+        const rt = Math.max(0, now - warmup.onset);
+        const correct = choice === trial.orientation;
+
+        warmup.awaiting = false;
+        warmup.lastRtEl.textContent = `${rt.toFixed(2)} ms (${correct ? "正确" : "错误"})`;
+
+        warmup.index += 1;
+        warmup.progressEl.textContent = `${warmup.index} / ${warmup.trials.length}`;
+
+        if (warmup.index >= warmup.trials.length) {
+          warmup.done = true;
+          warmup.root = createRoot(warmup.stage);
+          drawCenteredText(warmup.root, "Warm-up complete", 40);
+          warmup.messageEl.textContent = "训练结束";
+          setWarmupButtons([]);
+          warmup.returnBtn.style.display = "inline-block";
+          return;
+        }
+
+        warmup.root = createRoot(warmup.stage);
+        drawCenteredText(warmup.root, correct ? "OK" : "X", 64);
+        setTimeout(() => {
+          warmupShowReady();
+        }, 300);
+      }
+
+      function resetWarmup() {
+        warmup.trials = [];
+        warmup.index = -1;
+        warmup.awaiting = false;
+        warmup.done = false;
+        warmup.lastRtEl.textContent = "-";
+        warmup.progressEl.textContent = "未开始";
+        warmup.returnBtn.style.display = "none";
+        warmup.root = createRoot(warmup.stage);
+        drawCenteredText(warmup.root, "R", 72);
+        warmup.messageEl.textContent = "点击 start training 开始";
+        setWarmupButtons([]);
+      }
+
+      function startWarmup() {
+        warmup.trials = buildWarmupTrials();
+        warmup.index = 0;
+        warmup.done = false;
+        warmup.progressEl.textContent = `0 / ${warmup.trials.length}`;
+        warmup.returnBtn.style.display = "none";
+        warmup.lastRtEl.textContent = "-";
+        warmupShowReady();
+      }
+
+      warmup.startBtn.addEventListener("click", startWarmup);
+      warmup.returnBtn.addEventListener("click", () => {
+        resetWarmup();
+      });
+
+      function buildFormalTrialOrderForChar(ch) {
+        const trials = [];
+        ANGLES.forEach((angle) => {
+          ORIENTATIONS.forEach((orientation) => {
+            trials.push({ char: ch, angle, orientation });
+          });
+        });
+        return shuffle(trials);
+      }
+
+      function setFormalButtons(buttons) {
+        formal.buttonsEl.innerHTML = "";
+        buttons.forEach((cfg) => {
+          const b = document.createElement("button");
+          b.textContent = cfg.text;
+          if (cfg.className) {
+            b.className = cfg.className;
+          }
+          b.disabled = !!cfg.disabled;
+          b.addEventListener("click", cfg.onClick);
+          formal.buttonsEl.appendChild(b);
+        });
+      }
+
+      function formalCurrentChar() {
+        return formal.charOrder[formal.charIndex] || "";
+      }
+
+      function formalCurrentTrial() {
+        return formal.trialOrder[formal.trialIndex] || null;
+      }
+
+      function formalModeText(cond) {
+        const map = {
+          N: "N 直接刺激",
+          I: "I 先给字符",
+          O: "O 先给朝向",
+          B: "B 字符+朝向分开",
+          C: "C 字符+朝向同时"
+        };
+        return map[cond] || "-";
+      }
+
+      function formalShowCharacterHeader() {
+        const charNo = formal.charIndex + 1;
+        const ch = formalCurrentChar();
+
+        formal.characterLabelEl.textContent = `Character ${charNo} (${ch})`;
+        formal.modeLabelEl.textContent = formalModeText(formal.condition);
+        formal.progressEl.textContent = `总进度 ${formal.responses.length} / 72`;
+
+        formal.root = createRoot(formal.stage);
+        drawCenteredText(formal.root, `Character ${charNo}`, 54);
+
+        formal.messageEl.textContent = "准备开始该字符的12个组合";
+      }
+
+      function formalShowReadyState() {
+        formal.phase = "ready";
+        formal.awaiting = false;
+        formal.doneArea.style.display = "none";
+
+        const cond = formal.condition;
+        const trial = formalCurrentTrial();
+        const ch = formalCurrentChar();
+
+        if (cond === "N") {
+          formal.root = createRoot(formal.stage);
+          drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 52);
+          formal.messageEl.textContent = "ready";
+          setFormalButtons([
+            { text: "ready", onClick: () => formalPresentStimulus(trial) }
+          ]);
+          return;
+        }
+
+        if (cond === "I") {
+          formal.root = createRoot(formal.stage);
+          drawIdentityCue(formal.root, ch);
+          formal.messageEl.textContent = `Character ${formal.charIndex + 1} · 提示字符: ${ch}`;
+          setFormalButtons([
+            { text: "ready", onClick: () => formalPresentStimulus(trial) }
+          ]);
+          return;
+        }
+
+        formal.currentInformationTrial = trial;
+
+        if (cond === "O") {
+          formal.root = createRoot(formal.stage);
+          drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 52);
+          formal.messageEl.textContent = "点击 information 查看朝向";
+          setFormalButtons([
+            { text: "information", onClick: formalShowInformation }
+          ]);
+          return;
+        }
+
+        if (cond === "B") {
+          formal.root = createRoot(formal.stage);
+          drawIdentityCue(formal.root, ch);
+          formal.messageEl.textContent = `Character ${formal.charIndex + 1} · 字符提示: ${ch}`;
+          setFormalButtons([
+            { text: "information", onClick: formalShowInformation }
+          ]);
+          return;
+        }
+
+        if (cond === "C") {
+          formal.root = createRoot(formal.stage);
+          drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 52);
+          formal.messageEl.textContent = "点击 information 查看旋转字符（正面）";
+          setFormalButtons([
+            { text: "information", onClick: formalShowInformation }
+          ]);
+        }
+      }
+
+      function formalShowInformation() {
+        const trial = formal.currentInformationTrial || formalCurrentTrial();
+        if (!trial) {
+          return;
+        }
+
+        formal.phase = "information";
+        formal.root = createRoot(formal.stage);
+
+        if (formal.condition === "O" || formal.condition === "B") {
+          drawArrowCue(formal.stage, formal.root, trial.angle);
+          formal.messageEl.textContent = `目标角度: ${trial.angle}°`;
+        } else if (formal.condition === "C") {
+          drawTextStimulus(formal.root, trial.char, trial.angle, "F");
+          formal.messageEl.textContent = `旋转字符提示: ${trial.char} @ ${trial.angle}°`;
+        }
+
+        setFormalButtons([
+          { text: "ready", onClick: () => formalPresentStimulus(trial) }
+        ]);
+      }
+
+      function formalPresentStimulus(trial) {
+        if (!trial) {
+          return;
+        }
+        formal.phase = "stimulus";
+        formal.activeStimulus = trial;
+        formal.root = createRoot(formal.stage);
+        drawTextStimulus(formal.root, trial.char, trial.angle, trial.orientation);
+        formal.messageEl.textContent = `请判断：正位(F) 或 镜像(J)`;
+        setFormalButtons([
+          { text: "F", onClick: () => formalRespond("F") },
+          { text: "J", onClick: () => formalRespond("J") }
+        ]);
+
+        requestAnimationFrame(() => {
+          formal.onset = performance.now();
+          formal.awaiting = true;
+        });
+      }
+
+      function formalAdvanceTrial() {
+        formal.trialIndex += 1;
+
+        if (formal.trialIndex >= formal.trialOrder.length) {
+          formal.charIndex += 1;
+
+          if (formal.charIndex >= formal.charOrder.length) {
+            formal.phase = "done";
+            formal.awaiting = false;
+            formal.messageEl.textContent = "所有题目已完成";
+            setFormalButtons([]);
+            formal.doneArea.style.display = "flex";
+            setGlobalStatus(`Formal done: ${formal.participantId} (${formal.condition})`);
+            persistFormalRun();
+            return;
+          }
+
+          formal.trialOrder = buildFormalTrialOrderForChar(formalCurrentChar());
+          formal.trialIndex = 0;
+          formalShowCharacterHeader();
+          setTimeout(formalShowReadyState, 350);
+          return;
+        }
+
+        formalShowReadyState();
+      }
+
+      function formalRespond(choice) {
+        if (!formal.awaiting || !formal.activeStimulus) {
+          return;
+        }
+
+        const now = performance.now();
+        const trial = formal.activeStimulus;
+        const rt = Math.max(0, now - formal.onset);
+        const correct = choice === trial.orientation;
+        formal.awaiting = false;
+
+        formal.responses.push({
+          participantId: formal.participantId,
+          condition: formal.condition,
+          char: trial.char,
+          angle: trial.angle,
+          orientation: trial.orientation,
+          response: choice,
+          correct,
+          rt,
+          timestamp: new Date().toISOString()
+        });
+
+        formal.lastRtEl.textContent = `${rt.toFixed(2)} ms (${correct ? "正确" : "错误"})`;
+
+        formal.root = createRoot(formal.stage);
+        drawCenteredText(formal.root, correct ? "OK" : "X", 62);
+
+        setTimeout(() => {
+          formalAdvanceTrial();
+        }, 220);
+      }
+
+      function resetFormalAll() {
+        formal.participantId = "";
+        formal.condition = "N";
+        formal.charOrder = [];
+        formal.charIndex = 0;
+        formal.trialOrder = [];
+        formal.trialIndex = -1;
+        formal.phase = "idle";
+        formal.awaiting = false;
+        formal.onset = 0;
+        formal.activeStimulus = null;
+        formal.responses = [];
+        formal.currentInformationTrial = null;
+        formal.startedAt = "";
+
+        formal.setupCard.style.display = "block";
+        formal.promptCard.style.display = "none";
+        formal.runCard.style.display = "none";
+        formal.setupHint.textContent = "";
+        formal.lastRtEl.textContent = "-";
+        formal.messageEl.textContent = "请先完成上方初始化";
+
+        formal.root = createRoot(formal.stage);
+        drawCenteredText(formal.root, "Ready", 52);
+        setFormalButtons([]);
+      }
+
+      function startFormalExperimentFlow() {
+        formal.setupCard.style.display = "none";
+        formal.promptCard.style.display = "none";
+        formal.runCard.style.display = "block";
+
+        formal.charOrder = shuffle(CHARS);
+        formal.charIndex = 0;
+        formal.trialOrder = buildFormalTrialOrderForChar(formalCurrentChar());
+        formal.trialIndex = 0;
+
+        formalShowCharacterHeader();
+        setTimeout(formalShowReadyState, 350);
+      }
+
+      function enterFormalSetup() {
+        const pid = formal.participantInput.value.trim();
+        const cond = formal.conditionInput.value;
+
+        if (!pid) {
+          formal.setupHint.textContent = "Participant ID 不能为空";
+          return;
+        }
+
+        formal.participantId = pid;
+        formal.condition = cond;
+        formal.startedAt = new Date().toISOString();
+        formal.setupHint.textContent = "";
+
+        formal.promptText.textContent = CONDITION_TEXT[cond];
+        formal.setupCard.style.display = "none";
+        formal.promptCard.style.display = "block";
+        formal.runCard.style.display = "none";
+      }
+
+      document.getElementById("enterFormalBtn").addEventListener("click", enterFormalSetup);
+      document.getElementById("formalPromptOkBtn").addEventListener("click", startFormalExperimentFlow);
+      document.getElementById("formalResetTopBtn").addEventListener("click", resetFormalAll);
+      document.getElementById("formalResetRunBtn").addEventListener("click", resetFormalAll);
+      formal.viewDataBtn.addEventListener("click", () => {
+        switchTab("data");
+      });
+
+      function loadRecords() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return [];
+          }
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            return [];
+          }
+          return parsed;
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function saveRecords(records) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      }
+
+      function persistFormalRun() {
+        if (!formal.responses.length) {
+          return;
+        }
+        const records = loadRecords();
+        const runId = `${formal.participantId}_${formal.condition}_${Date.now()}`;
+
+        const payload = {
+          runId,
+          participantId: formal.participantId,
+          condition: formal.condition,
+          startedAt: formal.startedAt,
+          endedAt: new Date().toISOString(),
+          responses: formal.responses.map((d) => ({ ...d }))
+        };
+
+        records.push(payload);
+        saveRecords(records);
+      }
+
+      function meanRtByAngle(rows) {
+        const out = ANGLES.map((angle) => {
+          const filtered = rows.filter((d) => d.angle === angle && d.correct);
+          return {
+            angle,
+            rt: filtered.length ? d3.mean(filtered, (d) => d.rt) : NaN
+          };
+        });
+
+        const zeroRow = out.find((d) => d.angle === 0);
+        out.push({ angle: 360, rt: zeroRow ? zeroRow.rt : NaN });
         return out;
       }
 
-      function parseBInterval(text) {
-        const m = String(text || "").trim().match(/^(\d+)\s*-\s*(\d+)$/);
-        if (!m) {
-          return [500, 1500];
-        }
-        const a = Number(m[1]);
-        const b = Number(m[2]);
-        if (!Number.isFinite(a) || !Number.isFinite(b)) {
-          return [500, 1500];
-        }
-        return [Math.min(a, b), Math.max(a, b)];
-      }
-
-      function randomInRange([min, max]) {
-        return Math.floor(min + Math.random() * (max - min + 1));
-      }
-
-      function buildTrials() {
-        const base = [];
-        for (let r = 0; r < state.repetitions; r++) {
-          for (const ch of CHARS) {
-            for (const angle of ANGLES) {
-              base.push({ char: ch, angle, orientation: "Normal" });
-              base.push({ char: ch, angle, orientation: "Mirrored" });
-            }
-          }
-        }
-        state.trials = shuffle(base).map((t, idx) => ({ ...t, index: idx + 1 }));
-      }
-
-      function shortestAngle(angle) {
-        return Math.min(angle, 360 - angle);
-      }
-
-      function wait(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-      }
-
-      async function showFixation() {
-        setStatus("注视点");
-        clearStage();
-        drawFixation();
-        await wait(FIXATION_MS);
-      }
-
-      async function showAdvanceInfo(trial) {
-        setStatus("前行信息");
-        clearStage();
-
-        if (state.group === "N") {
-          await wait(250);
-          return;
-        }
-
-        if (state.group === "I") {
-          drawIdentityCue(trial.char);
-          await wait(ADVANCE_MS);
-          return;
-        }
-
-        if (state.group === "O") {
-          drawArrow(trial.angle);
-          await wait(ADVANCE_MS);
-          return;
-        }
-
-        if (state.group === "B") {
-          drawIdentityCue(trial.char);
-          await wait(ADVANCE_MS);
-
-          clearStage();
-          setStatus("B 组可变间隔");
-          await wait(randomInRange(state.bIntervalRange));
-
-          setStatus("B 组方位提示");
-          clearStage();
-          drawArrow(trial.angle);
-          await wait(ADVANCE_MS);
-          return;
-        }
-
-        if (state.group === "C") {
-          drawCombinedCue(trial);
-          await wait(ADVANCE_MS);
-        }
-      }
-
-      function showTestStimulus(trial) {
-        setStatus("测试刺激");
-        clearStage();
-        drawCharacter({ ch: trial.char, angle: trial.angle, orientation: trial.orientation });
-
-        // 将时间戳放到下一帧，尽量贴近视觉刺激实际可见时刻。
-        requestAnimationFrame(() => {
-          state.stimulusOnset = performance.now();
-          state.allowResponseFrom = state.stimulusOnset;
-          state.awaitingResponse = true;
-        });
-      }
-
-      function keyboardHandler(e) {
-        if (!state.started || !state.awaitingResponse) {
-          return;
-        }
-
-        const key = e.key.toLowerCase();
-        if (!(key in KEY_MAP)) {
-          return;
-        }
-
-        const responseTime = performance.now();
-        if (responseTime < state.allowResponseFrom) {
-          return;
-        }
-
-        const judgedOrientation = KEY_MAP[key];
-        const trial = state.currentTrial;
-
-        state.awaitingResponse = false;
-
-        const isCorrect = judgedOrientation === trial.orientation;
-        const rt = Math.max(0, responseTime - state.stimulusOnset);
-
-        state.results.push({
-          Subject_ID: state.participantId,
-          Group: state.group,
-          Angle: trial.angle,
-          Orientation: trial.orientation,
-          Is_Correct: isCorrect,
-          RT: Math.round(rt * 1000) / 1000,
-          Shortest_Angle: shortestAngle(trial.angle)
-        });
-
-        handlePostResponse(isCorrect);
-      }
-
-      async function flashError() {
-        const node = document.getElementById("stage");
-        node.classList.add("error-flash");
-        await wait(FEEDBACK_MS);
-        node.classList.remove("error-flash");
-      }
-
-      async function handlePostResponse(isCorrect) {
-        if (!isCorrect) {
-          await flashError();
-        }
-        await wait(ITI_MS);
-        runNextTrial();
-      }
-
-      async function runNextTrial() {
-        state.trialIndex += 1;
-
-        if (state.trialIndex >= state.trials.length) {
-          state.started = false;
-          setStatus("实验完成");
-          setTrialInfo(`已完成 ${state.results.length} 试次`);
-          showResults();
-          return;
-        }
-
-        const trial = state.trials[state.trialIndex];
-        state.currentTrial = trial;
-        setTrialInfo(`试次 ${state.trialIndex + 1} / ${state.trials.length}`);
-
-        await showFixation();
-        await showAdvanceInfo(trial);
-        showTestStimulus(trial);
-      }
-
-      function renderSummaryTable() {
-        const grouped = d3.rollup(
-          state.results,
-          (rows) => {
-            const correctRows = rows.filter((r) => r.Is_Correct);
-            return {
-              n: rows.length,
-              acc: rows.length ? d3.mean(rows, (d) => (d.Is_Correct ? 1 : 0)) : 0,
-              rt: correctRows.length ? d3.mean(correctRows, (d) => d.RT) : NaN
-            };
-          },
-          (d) => d.Angle
-        );
-
-        const rows = ANGLES.map((angle) => {
-          const g = grouped.get(angle) || { n: 0, acc: 0, rt: NaN };
-          return {
-            angle,
-            n: g.n,
-            acc: `${(g.acc * 100).toFixed(1)}%`,
-            rt: Number.isFinite(g.rt) ? `${g.rt.toFixed(2)} ms` : "-"
-          };
-        });
-
-        const html = [
-          "<table>",
-          "<thead><tr><th>Angle</th><th>Trials</th><th>Accuracy</th><th>Mean RT (Correct)</th></tr></thead>",
-          "<tbody>",
-          ...rows.map((r) => `<tr><td>${r.angle}</td><td>${r.n}</td><td>${r.acc}</td><td>${r.rt}</td></tr>`),
-          "</tbody>",
-          "</table>"
-        ].join("");
-
-        summaryTableEl.innerHTML = html;
-      }
-
-      function renderRtChart() {
-        const chartEl = document.getElementById("chart");
-        chartEl.innerHTML = "";
-
-        const data = ANGLES.map((angle) => {
-          const rows = state.results.filter((d) => d.Angle === angle && d.Is_Correct);
-          return {
-            angle,
-            rt: rows.length ? d3.mean(rows, (d) => d.RT) : NaN
-          };
-        });
-
-        const margin = { top: 26, right: 24, bottom: 44, left: 58 };
-        const width = Math.min(chartEl.clientWidth || 900, 920) - margin.left - margin.right;
-        const height = 240 - margin.top - margin.bottom;
+      function renderLineChart(containerEl, seriesMap, title) {
+        containerEl.innerHTML = "";
+        const width = Math.max(300, Math.min(containerEl.clientWidth || 900, 980));
+        const height = 300;
+        const margin = { top: 28, right: 16, bottom: 44, left: 56 };
+        const innerW = width - margin.left - margin.right;
+        const innerH = height - margin.top - margin.bottom;
 
         const svg = d3
-          .select(chartEl)
+          .select(containerEl)
           .append("svg")
-          .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+          .attr("viewBox", `0 0 ${width} ${height}`)
           .attr("width", "100%")
           .attr("height", "100%");
 
-        const g = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
+        const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const valid = data.filter((d) => Number.isFinite(d.rt));
-        const maxRt = valid.length ? d3.max(valid, (d) => d.rt) : 1000;
-        const minRt = valid.length ? d3.min(valid, (d) => d.rt) : 0;
+        const allValues = [];
+        Object.values(seriesMap).forEach((rows) => {
+          rows.forEach((d) => {
+            if (Number.isFinite(d.rt)) {
+              allValues.push(d.rt);
+            }
+          });
+        });
 
-        const yPad = Math.max(30, (maxRt - minRt) * 0.15);
+        const yMin = allValues.length ? Math.max(0, d3.min(allValues) - 30) : 0;
+        const yMax = allValues.length ? d3.max(allValues) + 30 : 1000;
 
-        const x = d3.scalePoint().domain(ANGLES).range([0, width]);
-        const y = d3
-          .scaleLinear()
-          .domain([Math.max(0, minRt - yPad), maxRt + yPad])
-          .nice()
-          .range([height, 0]);
+        const x = d3.scaleLinear().domain([0, 360]).range([0, innerW]);
+        const y = d3.scaleLinear().domain([yMin, yMax]).nice().range([innerH, 0]);
 
-        g.append("g").attr("transform", `translate(0, ${height})`).call(d3.axisBottom(x));
+        g
+          .append("g")
+          .attr("transform", `translate(0,${innerH})`)
+          .call(d3.axisBottom(x).tickValues([0, 60, 120, 180, 240, 300, 360]));
         g.append("g").call(d3.axisLeft(y));
 
         g.append("text")
-          .attr("x", width / 2)
-          .attr("y", height + 36)
+          .attr("x", innerW / 2)
+          .attr("y", innerH + 36)
           .attr("text-anchor", "middle")
-          .attr("fill", "#374151")
           .attr("font-size", 12)
-          .text("Angle (degree)");
+          .attr("fill", "#32404d")
+          .text("旋转角度(°)");
 
         g.append("text")
           .attr("transform", "rotate(-90)")
-          .attr("x", -height / 2)
+          .attr("x", -innerH / 2)
           .attr("y", -40)
           .attr("text-anchor", "middle")
-          .attr("fill", "#374151")
           .attr("font-size", 12)
-          .text("RT (ms)");
+          .attr("fill", "#32404d")
+          .text("平均反应时(ms)");
 
         const line = d3
           .line()
@@ -752,169 +1236,230 @@
           .x((d) => x(d.angle))
           .y((d) => y(d.rt));
 
-        g.append("path")
-          .datum(data)
-          .attr("fill", "none")
-          .attr("stroke", "#0f766e")
-          .attr("stroke-width", 2.5)
-          .attr("d", line);
+        Object.entries(seriesMap).forEach(([cond, rows]) => {
+          g.append("path")
+            .datum(rows)
+            .attr("fill", "none")
+            .attr("stroke", conditionColor(cond))
+            .attr("stroke-width", 2.4)
+            .attr("d", line);
 
-        g.selectAll("circle.point")
-          .data(valid)
-          .enter()
-          .append("circle")
-          .attr("class", "point")
-          .attr("cx", (d) => x(d.angle))
-          .attr("cy", (d) => y(d.rt))
-          .attr("r", 4.5)
-          .attr("fill", "#0f766e");
+          g.selectAll(`.pt-${cond}`)
+            .data(rows.filter((d) => Number.isFinite(d.rt)))
+            .enter()
+            .append("circle")
+            .attr("r", 3.8)
+            .attr("cx", (d) => x(d.angle))
+            .attr("cy", (d) => y(d.rt))
+            .attr("fill", conditionColor(cond));
+        });
 
-        g.append("text")
-          .attr("x", 0)
-          .attr("y", -8)
-          .attr("font-size", 13)
-          .attr("fill", "#111")
-          .attr("font-weight", 700)
-          .text("反应时 vs 旋转角度（仅正确反应）");
+        const legend = svg.append("g").attr("transform", `translate(${margin.left},8)`);
+        const legendItems = Object.keys(seriesMap);
+
+        legendItems.forEach((cond, i) => {
+          const item = legend.append("g").attr("transform", `translate(${i * 90},0)`);
+          item.append("rect").attr("width", 14).attr("height", 9).attr("rx", 2).attr("fill", conditionColor(cond));
+          item.append("text").attr("x", 18).attr("y", 9).attr("font-size", 12).text(cond);
+        });
+
+        svg
+          .append("text")
+          .attr("x", width - 8)
+          .attr("y", 16)
+          .attr("text-anchor", "end")
+          .attr("font-size", 12)
+          .attr("fill", "#51606e")
+          .text(title);
       }
 
-      function csvEscape(value) {
-        const s = String(value);
-        if (s.includes(",") || s.includes("\n") || s.includes("\"")) {
-          return `"${s.replace(/"/g, '""')}"`;
-        }
-        return s;
+      function groupRunsByParticipant(records) {
+        const grouped = d3.group(records, (r) => r.participantId);
+        return Array.from(grouped.entries()).map(([participantId, runs]) => ({ participantId, runs }));
       }
 
-      function toCsv(records) {
-        const headers = [
-          "Subject_ID",
-          "Group",
-          "Angle",
-          "Orientation",
-          "Is_Correct",
-          "RT",
-          "Shortest_Angle"
-        ];
+      function flattenResponses(runs, condition) {
+        const out = [];
+        runs.forEach((run) => {
+          if (condition && run.condition !== condition) {
+            return;
+          }
+          run.responses.forEach((resp) => out.push(resp));
+        });
+        return out;
+      }
 
+      function toCsv(rows) {
+        const headers = ["participantId", "condition", "char", "angle", "orientation", "response", "correct", "rt", "timestamp"];
         const lines = [headers.join(",")];
-        for (const r of records) {
-          lines.push(headers.map((h) => csvEscape(r[h])).join(","));
-        }
+        rows.forEach((r) => {
+          const vals = headers.map((h) => {
+            const v = String(r[h] == null ? "" : r[h]);
+            if (v.includes(",") || v.includes("\"") || v.includes("\n")) {
+              return `"${v.replace(/\"/g, '""')}"`;
+            }
+            return v;
+          });
+          lines.push(vals.join(","));
+        });
         return lines.join("\n");
       }
 
-      function downloadCsv() {
-        if (!state.results.length) {
-          return;
-        }
-        const csv = toCsv(state.results);
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      function downloadCsvFile(fileName, content) {
+        const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        const safeId = state.participantId.replace(/[^a-zA-Z0-9_-]/g, "_") || "participant";
-        const ts = new Date().toISOString().replace(/[:.]/g, "-");
         a.href = url;
-        a.download = `cooper-shepard_${safeId}_${state.group}_${ts}.csv`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
       }
 
-      function showResults() {
-        const total = state.results.length;
-        const acc = total ? d3.mean(state.results, (d) => (d.Is_Correct ? 1 : 0)) : 0;
-        const rtRows = state.results.filter((d) => d.Is_Correct);
-        const meanRt = rtRows.length ? d3.mean(rtRows, (d) => d.RT) : NaN;
+      function exportParticipantCondition(participantId, condition) {
+        const records = loadRecords();
+        const rows = [];
+        records.forEach((run) => {
+          if (run.participantId === participantId && run.condition === condition) {
+            run.responses.forEach((resp) => rows.push(resp));
+          }
+        });
 
-        resultSummaryEl.textContent = [
-          `被试: ${state.participantId}`,
-          `组别: ${state.group}`,
-          `总试次: ${total}`,
-          `正确率: ${(acc * 100).toFixed(1)}%`,
-          `正确反应平均 RT: ${Number.isFinite(meanRt) ? `${meanRt.toFixed(2)} ms` : "-"}`
-        ].join(" | ");
-
-        renderRtChart();
-        renderSummaryTable();
-        resultOverlay.style.display = "grid";
-      }
-
-      function resetExperimentState() {
-        state.trials = [];
-        state.results = [];
-        state.trialIndex = -1;
-        state.currentTrial = null;
-        state.awaitingResponse = false;
-        state.stimulusOnset = null;
-        state.started = false;
-        setStatus("等待初始化");
-        setTrialInfo("尚未开始");
-        clearStage();
-      }
-
-      function beginExperiment() {
-        const participantId = document.getElementById("participantId").value.trim();
-        const condition = document.getElementById("condition").value;
-        const repetitions = Number(document.getElementById("repetitions").value);
-        const bIntervalText = document.getElementById("bInterval").value;
-
-        if (!participantId) {
-          alert("请输入被试编号");
+        if (!rows.length) {
           return;
         }
 
-        if (!Number.isInteger(repetitions) || repetitions < 1) {
-          alert("重复次数必须是 >= 1 的整数");
+        const csv = toCsv(rows);
+        downloadCsvFile(`${participantId}_${condition}.csv`, csv);
+      }
+
+      function deleteParticipantCondition(participantId, condition) {
+        const records = loadRecords();
+        const next = records.filter((run) => !(run.participantId === participantId && run.condition === condition));
+        saveRecords(next);
+        renderDataDashboard();
+      }
+
+      function buildOverviewSeries(records) {
+        const out = {};
+        CONDITIONS.forEach((cond) => {
+          const rows = flattenResponses(records.filter((r) => r.condition === cond));
+          out[cond] = meanRtByAngle(rows);
+        });
+        return out;
+      }
+
+      function buildParticipantSeries(runs) {
+        const out = {};
+        CONDITIONS.forEach((cond) => {
+          const rows = flattenResponses(runs, cond);
+          out[cond] = meanRtByAngle(rows);
+        });
+        return out;
+      }
+
+      function renderDataDashboard() {
+        const records = loadRecords();
+        const overviewContainer = document.getElementById("overviewChart");
+        const idPanels = document.getElementById("idPanels");
+        idPanels.innerHTML = "";
+
+        const overviewSeries = buildOverviewSeries(records);
+        renderLineChart(overviewContainer, overviewSeries, "All participants / 5 conditions");
+
+        const grouped = groupRunsByParticipant(records);
+        if (!grouped.length) {
+          const empty = document.createElement("div");
+          empty.className = "id-card";
+          empty.textContent = "暂无正式实验数据";
+          idPanels.appendChild(empty);
           return;
         }
 
-        resetExperimentState();
+        grouped.forEach(({ participantId, runs }) => {
+          const card = document.createElement("div");
+          card.className = "id-card";
 
-        state.participantId = participantId;
-        state.group = condition;
-        state.repetitions = repetitions;
-        state.bIntervalRange = parseBInterval(bIntervalText);
+          const h = document.createElement("div");
+          h.className = "inline-row";
+          h.style.justifyContent = "space-between";
+          h.innerHTML = `<strong>Participant ID: ${participantId}</strong><span class="muted">Runs: ${runs.length}</span>`;
 
-        buildTrials();
-        overlay.style.display = "none";
-        resultOverlay.style.display = "none";
-        state.started = true;
+          const chart = document.createElement("div");
+          chart.className = "id-chart";
 
-        if (!state.keyboardBound) {
-          state.keyboardBound = true;
-          window.addEventListener("keydown", keyboardHandler, { passive: true });
+          const actions = document.createElement("div");
+          actions.className = "cond-actions";
+
+          CONDITIONS.forEach((cond) => {
+            const exists = runs.some((r) => r.condition === cond);
+            const line = document.createElement("div");
+            line.className = "cond-line";
+
+            const left = document.createElement("div");
+            left.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${conditionColor(cond)};margin-right:6px;"></span>Condition ${cond}`;
+
+            const right = document.createElement("div");
+            right.className = "inline-row";
+
+            const exportBtn = document.createElement("button");
+            exportBtn.textContent = "Export csv";
+            exportBtn.disabled = !exists;
+            exportBtn.addEventListener("click", () => exportParticipantCondition(participantId, cond));
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "delete";
+            delBtn.className = "danger";
+            delBtn.disabled = !exists;
+            delBtn.addEventListener("click", () => {
+              if (window.confirm(`确认删除 ${participantId} 的 Condition ${cond} 数据？`)) {
+                deleteParticipantCondition(participantId, cond);
+              }
+            });
+
+            right.appendChild(exportBtn);
+            right.appendChild(delBtn);
+            line.appendChild(left);
+            line.appendChild(right);
+            actions.appendChild(line);
+          });
+
+          card.appendChild(h);
+          card.appendChild(chart);
+          card.appendChild(actions);
+
+          idPanels.appendChild(card);
+
+          const series = buildParticipantSeries(runs);
+          renderLineChart(chart, series, `${participantId} / merged by condition`);
+        });
+      }
+
+      function handleFormalKeyboard(e) {
+        if (formal.phase !== "stimulus" || !formal.awaiting) {
+          return;
         }
-
-        setStatus(`进行中 | Group ${state.group}`);
-        runNextTrial();
+        const k = e.key.toLowerCase();
+        if (k === "f") {
+          formalRespond("F");
+        } else if (k === "j") {
+          formalRespond("J");
+        }
       }
 
-      function showCombinedDemo() {
-        const sample = {
-          char: CHARS[Math.floor(Math.random() * CHARS.length)],
-          angle: ANGLES[Math.floor(Math.random() * ANGLES.length)],
-          orientation: Math.random() < 0.5 ? "Normal" : "Mirrored"
-        };
-        clearStage();
-        drawCombinedCue(sample);
-        setStatus("C 组预览样张");
-      }
+      window.addEventListener("keydown", handleFormalKeyboard, { passive: true });
 
-      function restartToInit() {
-        resetExperimentState();
-        resultOverlay.style.display = "none";
-        overlay.style.display = "grid";
-      }
+      warmup.root = createRoot(warmup.stage);
+      drawCenteredText(warmup.root, "R", 72);
+      formal.root = createRoot(formal.stage);
+      drawCenteredText(formal.root, "Ready", 52);
 
-      startBtn.addEventListener("click", beginExperiment);
-      demoBtn.addEventListener("click", showCombinedDemo);
-      exportBtn.addEventListener("click", downloadCsv);
-      restartBtn.addEventListener("click", restartToInit);
-
-      drawFixation();
-      setTrialInfo("准备就绪，请初始化实验");
+      renderInstructionExamples();
+      resetWarmup();
+      resetFormalAll();
+      renderDataDashboard();
+      setGlobalStatus("Ready");
     })();
   </script>
 </body>
