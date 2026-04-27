@@ -384,7 +384,6 @@
             </div>
             <div class="btn-row space-top">
               <button id="warmupStartBtn">start training</button>
-              <button id="warmupReturnBtn" class="secondary" style="display:none;">return</button>
             </div>
           </div>
 
@@ -481,6 +480,9 @@
       const ORIENTATIONS = ["F", "J"];
       const CONDITIONS = ["N", "I", "O", "B", "C"];
       const STORAGE_KEY = "rotation_experiment_records_v1";
+      const FIXATION_MS = 500;
+      const STIMULUS_MS = 500;
+      const INFORMATION_MS = 2000;
 
       const CONDITION_TEXT = {
         N: "字符将会直接出现。",
@@ -511,13 +513,14 @@
         messageEl: document.getElementById("warmupMessage"),
         buttonsEl: document.getElementById("warmupButtons"),
         startBtn: document.getElementById("warmupStartBtn"),
-        returnBtn: document.getElementById("warmupReturnBtn"),
         lastRtEl: document.getElementById("warmupLastRt"),
         trials: [],
         index: -1,
         awaiting: false,
         onset: 0,
-        done: false
+        done: false,
+        running: false,
+        flowToken: 0
       };
 
       const formal = {
@@ -550,7 +553,8 @@
         activeStimulus: null,
         responses: [],
         currentInformationTrial: null,
-        startedAt: ""
+        startedAt: "",
+        flowToken: 0
       };
 
       function setGlobalStatus(text) {
@@ -622,17 +626,22 @@
         drawRing(root);
         ensureArrowMarker(svgSel, "arrowMarkerMain");
         const rad = (angle * Math.PI) / 180;
-        const x2 = Math.cos(rad) * 95;
-        const y2 = Math.sin(rad) * 95;
+        const halfLen = 62;
+        const dx = Math.cos(rad) * halfLen;
+        const dy = Math.sin(rad) * halfLen;
         root
           .append("line")
-          .attr("x1", 0)
-          .attr("y1", 0)
-          .attr("x2", x2)
-          .attr("y2", y2)
+          .attr("x1", -dx)
+          .attr("y1", -dy)
+          .attr("x2", dx)
+          .attr("y2", dy)
           .attr("stroke", "#1f2933")
           .attr("stroke-width", 4)
           .attr("marker-end", "url(#arrowMarkerMain)");
+      }
+
+      function showFixation(root) {
+        drawCenteredText(root, "+", 60);
       }
 
       function drawIdentityCue(root, ch) {
@@ -740,6 +749,9 @@
       }
 
       function warmupShowReady() {
+        if (!warmup.running) {
+          return;
+        }
         warmup.awaiting = false;
         warmup.messageEl.textContent = "ready";
         setWarmupButtons([
@@ -751,23 +763,61 @@
       }
 
       function warmupPresentStimulus() {
-        if (warmup.done) {
+        if (warmup.done || !warmup.running) {
           return;
         }
+        const token = warmup.flowToken;
         const trial = warmup.trials[warmup.index];
         warmup.root = createRoot(warmup.stage);
-        drawTextStimulus(warmup.root, trial.char, trial.angle, trial.orientation);
-        warmup.messageEl.textContent = `请判断：正位(F) 或 镜像(J)`;
+        showFixation(warmup.root);
+        warmup.messageEl.textContent = "注视点";
+        setWarmupButtons([]);
 
-        setWarmupButtons([
-          { text: "F", onClick: () => warmupRespond("F") },
-          { text: "J", onClick: () => warmupRespond("J") }
-        ]);
+        setTimeout(() => {
+          if (!warmup.running || token !== warmup.flowToken) {
+            return;
+          }
+          warmup.root = createRoot(warmup.stage);
+          drawTextStimulus(warmup.root, trial.char, trial.angle, trial.orientation);
+          warmup.messageEl.textContent = "刺激呈现中";
 
-        requestAnimationFrame(() => {
-          warmup.onset = performance.now();
-          warmup.awaiting = true;
-        });
+          requestAnimationFrame(() => {
+            if (!warmup.running || token !== warmup.flowToken) {
+              return;
+            }
+            warmup.onset = performance.now();
+          });
+
+          setTimeout(() => {
+            if (!warmup.running || token !== warmup.flowToken) {
+              return;
+            }
+            warmup.awaiting = true;
+            warmup.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
+            setWarmupButtons([
+              { text: "F", onClick: () => warmupRespond("F") },
+              { text: "J", onClick: () => warmupRespond("J") }
+            ]);
+          }, STIMULUS_MS);
+        }, FIXATION_MS);
+      }
+
+      function warmupAdvanceAfterCorrect() {
+        warmup.index += 1;
+        warmup.progressEl.textContent = `${warmup.index} / ${warmup.trials.length}`;
+
+        if (warmup.index >= warmup.trials.length) {
+          warmup.done = true;
+          warmup.running = false;
+          warmup.startBtn.textContent = "return";
+          warmup.root = createRoot(warmup.stage);
+          drawCenteredText(warmup.root, "Warm-up complete", 40);
+          warmup.messageEl.textContent = "训练结束";
+          setWarmupButtons([]);
+          return;
+        }
+
+        warmupShowReady();
       }
 
       function warmupRespond(choice) {
@@ -783,23 +833,15 @@
         warmup.awaiting = false;
         warmup.lastRtEl.textContent = `${rt.toFixed(2)} ms (${correct ? "正确" : "错误"})`;
 
-        warmup.index += 1;
-        warmup.progressEl.textContent = `${warmup.index} / ${warmup.trials.length}`;
-
-        if (warmup.index >= warmup.trials.length) {
-          warmup.done = true;
-          warmup.root = createRoot(warmup.stage);
-          drawCenteredText(warmup.root, "Warm-up complete", 40);
-          warmup.messageEl.textContent = "训练结束";
-          setWarmupButtons([]);
-          warmup.returnBtn.style.display = "inline-block";
-          return;
-        }
-
         warmup.root = createRoot(warmup.stage);
         drawCenteredText(warmup.root, correct ? "OK" : "X", 64);
+        // 错题保持当前题，直到作对才进入下一题。
         setTimeout(() => {
-          warmupShowReady();
+          if (correct) {
+            warmupAdvanceAfterCorrect();
+          } else {
+            warmupShowReady();
+          }
         }, 300);
       }
 
@@ -808,9 +850,11 @@
         warmup.index = -1;
         warmup.awaiting = false;
         warmup.done = false;
+        warmup.running = false;
+        warmup.flowToken += 1;
         warmup.lastRtEl.textContent = "-";
         warmup.progressEl.textContent = "未开始";
-        warmup.returnBtn.style.display = "none";
+        warmup.startBtn.textContent = "start training";
         warmup.root = createRoot(warmup.stage);
         drawCenteredText(warmup.root, "R", 72);
         warmup.messageEl.textContent = "点击 start training 开始";
@@ -818,18 +862,24 @@
       }
 
       function startWarmup() {
+        warmup.flowToken += 1;
         warmup.trials = buildWarmupTrials();
         warmup.index = 0;
         warmup.done = false;
+        warmup.running = true;
         warmup.progressEl.textContent = `0 / ${warmup.trials.length}`;
-        warmup.returnBtn.style.display = "none";
+        warmup.startBtn.textContent = "return";
         warmup.lastRtEl.textContent = "-";
         warmupShowReady();
       }
 
-      warmup.startBtn.addEventListener("click", startWarmup);
-      warmup.returnBtn.addEventListener("click", () => {
-        resetWarmup();
+      warmup.startBtn.addEventListener("click", () => {
+        if (warmup.running || warmup.done) {
+          resetWarmup();
+          switchTab("instructions");
+          return;
+        }
+        startWarmup();
       });
 
       function buildFormalTrialOrderForChar(ch) {
@@ -956,7 +1006,9 @@
           return;
         }
 
+        const token = formal.flowToken;
         formal.phase = "information";
+        formal.awaiting = false;
         formal.root = createRoot(formal.stage);
 
         if (formal.condition === "O" || formal.condition === "B") {
@@ -967,29 +1019,63 @@
           formal.messageEl.textContent = `旋转字符提示: ${trial.char} @ ${trial.angle}°`;
         }
 
-        setFormalButtons([
-          { text: "ready", onClick: () => formalPresentStimulus(trial) }
-        ]);
+        setFormalButtons([]);
+
+        setTimeout(() => {
+          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+            return;
+          }
+          formal.root = createRoot(formal.stage);
+          drawCenteredText(formal.root, "ready", 54);
+          formal.messageEl.textContent = "信息已消失，请点击 ready";
+          setFormalButtons([
+            { text: "ready", onClick: () => formalPresentStimulus(trial) }
+          ]);
+        }, INFORMATION_MS);
       }
 
       function formalPresentStimulus(trial) {
         if (!trial) {
           return;
         }
-        formal.phase = "stimulus";
+        const token = formal.flowToken;
+        formal.phase = "fixation";
+        formal.awaiting = false;
         formal.activeStimulus = trial;
         formal.root = createRoot(formal.stage);
-        drawTextStimulus(formal.root, trial.char, trial.angle, trial.orientation);
-        formal.messageEl.textContent = `请判断：正位(F) 或 镜像(J)`;
-        setFormalButtons([
-          { text: "F", onClick: () => formalRespond("F") },
-          { text: "J", onClick: () => formalRespond("J") }
-        ]);
+        showFixation(formal.root);
+        formal.messageEl.textContent = "注视点";
+        setFormalButtons([]);
 
-        requestAnimationFrame(() => {
-          formal.onset = performance.now();
-          formal.awaiting = true;
-        });
+        setTimeout(() => {
+          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+            return;
+          }
+          formal.phase = "stimulus";
+          formal.root = createRoot(formal.stage);
+          drawTextStimulus(formal.root, trial.char, trial.angle, trial.orientation);
+          formal.messageEl.textContent = "刺激呈现中";
+
+          requestAnimationFrame(() => {
+            if (token !== formal.flowToken || formal.phase !== "stimulus") {
+              return;
+            }
+            formal.onset = performance.now();
+          });
+
+          setTimeout(() => {
+            if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+              return;
+            }
+            formal.phase = "response";
+            formal.awaiting = true;
+            formal.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
+            setFormalButtons([
+              { text: "F", onClick: () => formalRespond("F") },
+              { text: "J", onClick: () => formalRespond("J") }
+            ]);
+          }, STIMULUS_MS);
+        }, FIXATION_MS);
       }
 
       function formalAdvanceTrial() {
@@ -1030,25 +1116,29 @@
         const correct = choice === trial.orientation;
         formal.awaiting = false;
 
-        formal.responses.push({
-          participantId: formal.participantId,
-          condition: formal.condition,
-          char: trial.char,
-          angle: trial.angle,
-          orientation: trial.orientation,
-          response: choice,
-          correct,
-          rt,
-          timestamp: new Date().toISOString()
-        });
-
         formal.lastRtEl.textContent = `${rt.toFixed(2)} ms (${correct ? "正确" : "错误"})`;
 
         formal.root = createRoot(formal.stage);
         drawCenteredText(formal.root, correct ? "OK" : "X", 62);
 
+        // 错题继续当前试次，直到作对后才记录并进入下一题。
         setTimeout(() => {
-          formalAdvanceTrial();
+          if (correct) {
+            formal.responses.push({
+              participantId: formal.participantId,
+              condition: formal.condition,
+              char: trial.char,
+              angle: trial.angle,
+              orientation: trial.orientation,
+              response: choice,
+              correct: true,
+              rt,
+              timestamp: new Date().toISOString()
+            });
+            formalAdvanceTrial();
+          } else {
+            formalShowReadyState();
+          }
         }, 220);
       }
 
@@ -1066,6 +1156,7 @@
         formal.responses = [];
         formal.currentInformationTrial = null;
         formal.startedAt = "";
+        formal.flowToken += 1;
 
         formal.setupCard.style.display = "block";
         formal.promptCard.style.display = "none";
@@ -1080,6 +1171,7 @@
       }
 
       function startFormalExperimentFlow() {
+        formal.flowToken += 1;
         formal.setupCard.style.display = "none";
         formal.promptCard.style.display = "none";
         formal.runCard.style.display = "block";
@@ -1266,7 +1358,7 @@
         svg
           .append("text")
           .attr("x", width - 8)
-          .attr("y", 16)
+          .attr("y", height - 8)
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", "#51606e")
@@ -1437,7 +1529,7 @@
       }
 
       function handleFormalKeyboard(e) {
-        if (formal.phase !== "stimulus" || !formal.awaiting) {
+        if (formal.phase !== "response" || !formal.awaiting) {
           return;
         }
         const k = e.key.toLowerCase();
