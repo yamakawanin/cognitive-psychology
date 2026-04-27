@@ -481,7 +481,6 @@
       const CONDITIONS = ["N", "I", "O", "B", "C"];
       const STORAGE_KEY = "rotation_experiment_records_v1";
       const FIXATION_MS = 500;
-      const STIMULUS_MS = 500;
       const INFORMATION_MS = 2000;
 
       const CONDITION_TEXT = {
@@ -625,7 +624,8 @@
       function drawArrowCue(svgSel, root, angle) {
         drawRing(root);
         ensureArrowMarker(svgSel, "arrowMarkerMain");
-        const rad = (angle * Math.PI) / 180;
+        // 角度规则: 0°朝上, 顺时针为正方向。
+        const rad = ((angle - 90) * Math.PI) / 180;
         const halfLen = 62;
         const dx = Math.cos(rad) * halfLen;
         const dy = Math.sin(rad) * halfLen;
@@ -779,26 +779,20 @@
           }
           warmup.root = createRoot(warmup.stage);
           drawTextStimulus(warmup.root, trial.char, trial.angle, trial.orientation);
-          warmup.messageEl.textContent = "刺激呈现中";
+          warmup.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
+
+          setWarmupButtons([
+            { text: "F", onClick: () => warmupRespond("F") },
+            { text: "J", onClick: () => warmupRespond("J") }
+          ]);
 
           requestAnimationFrame(() => {
             if (!warmup.running || token !== warmup.flowToken) {
               return;
             }
             warmup.onset = performance.now();
-          });
-
-          setTimeout(() => {
-            if (!warmup.running || token !== warmup.flowToken) {
-              return;
-            }
             warmup.awaiting = true;
-            warmup.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
-            setWarmupButtons([
-              { text: "F", onClick: () => warmupRespond("F") },
-              { text: "J", onClick: () => warmupRespond("J") }
-            ]);
-          }, STIMULUS_MS);
+          });
         }, FIXATION_MS);
       }
 
@@ -876,7 +870,6 @@
       warmup.startBtn.addEventListener("click", () => {
         if (warmup.running || warmup.done) {
           resetWarmup();
-          switchTab("instructions");
           return;
         }
         startWarmup();
@@ -1051,30 +1044,23 @@
           if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
             return;
           }
-          formal.phase = "stimulus";
+          formal.phase = "response";
           formal.root = createRoot(formal.stage);
           drawTextStimulus(formal.root, trial.char, trial.angle, trial.orientation);
-          formal.messageEl.textContent = "刺激呈现中";
+          formal.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
+
+          setFormalButtons([
+            { text: "F", onClick: () => formalRespond("F") },
+            { text: "J", onClick: () => formalRespond("J") }
+          ]);
 
           requestAnimationFrame(() => {
-            if (token !== formal.flowToken || formal.phase !== "stimulus") {
+            if (token !== formal.flowToken || formal.phase !== "response") {
               return;
             }
             formal.onset = performance.now();
-          });
-
-          setTimeout(() => {
-            if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
-              return;
-            }
-            formal.phase = "response";
             formal.awaiting = true;
-            formal.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
-            setFormalButtons([
-              { text: "F", onClick: () => formalRespond("F") },
-              { text: "J", onClick: () => formalRespond("J") }
-            ]);
-          }, STIMULUS_MS);
+          });
         }, FIXATION_MS);
       }
 
