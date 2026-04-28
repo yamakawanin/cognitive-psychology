@@ -468,7 +468,7 @@
     </div>
 
     <div class="footer">
-      <div id="globalStatus">Ready</div>
+      <div id="globalStatus">就绪</div>
       <div>Angles: 0° / 60° / 120° / 180° / 240° / 300°</div>
     </div>
   </div>
@@ -480,7 +480,6 @@
       const ORIENTATIONS = ["F", "J"];
       const CONDITIONS = ["N", "I", "O", "B", "C"];
       const STORAGE_KEY = "rotation_experiment_records_v1";
-      const FIXATION_MS = 500;
       const INFORMATION_MS = 2000;
 
       const CONDITION_TEXT = {
@@ -624,24 +623,36 @@
       function drawArrowCue(svgSel, root, angle) {
         drawRing(root);
         ensureArrowMarker(svgSel, "arrowMarkerMain");
-        // 角度规则: 0°朝上, 顺时针为正方向。
-        const rad = ((angle - 90) * Math.PI) / 180;
-        const halfLen = 62;
-        const dx = Math.cos(rad) * halfLen;
-        const dy = Math.sin(rad) * halfLen;
-        root
+
+        const arrow = root.append("g").attr("transform", `rotate(${angle})`);
+        arrow
           .append("line")
-          .attr("x1", -dx)
-          .attr("y1", -dy)
-          .attr("x2", dx)
-          .attr("y2", dy)
+          .attr("x1", 0)
+          .attr("y1", 62)
+          .attr("x2", 0)
+          .attr("y2", -62)
           .attr("stroke", "#1f2933")
           .attr("stroke-width", 4)
           .attr("marker-end", "url(#arrowMarkerMain)");
       }
 
-      function showFixation(root) {
-        drawCenteredText(root, "+", 60);
+      function drawOutlineStimulus(root, ch, angle, orientationCode) {
+        drawRing(root);
+        const mirrored = orientationCode === "J";
+        root
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("font-size", 86)
+          .attr("font-weight", 700)
+          .attr("font-family", "Avenir Next, PingFang SC, sans-serif")
+          .attr("fill", "none")
+          .attr("stroke", "#9aa7b5")
+          .attr("stroke-width", 1.8)
+          .attr("stroke-linejoin", "round")
+          .attr("opacity", 0.55)
+          .attr("transform", `rotate(${angle}) scale(${mirrored ? -1 : 1},1)`)
+          .text(ch);
       }
 
       function drawIdentityCue(root, ch) {
@@ -753,7 +764,7 @@
           return;
         }
         warmup.awaiting = false;
-        warmup.messageEl.textContent = "ready";
+        warmup.messageEl.textContent = "";
         setWarmupButtons([
           {
             text: "ready",
@@ -766,34 +777,23 @@
         if (warmup.done || !warmup.running) {
           return;
         }
-        const token = warmup.flowToken;
         const trial = warmup.trials[warmup.index];
         warmup.root = createRoot(warmup.stage);
-        showFixation(warmup.root);
-        warmup.messageEl.textContent = "注视点";
-        setWarmupButtons([]);
+        drawTextStimulus(warmup.root, trial.char, trial.angle, trial.orientation);
+        warmup.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
 
-        setTimeout(() => {
-          if (!warmup.running || token !== warmup.flowToken) {
+        setWarmupButtons([
+          { text: "F", onClick: () => warmupRespond("F") },
+          { text: "J", onClick: () => warmupRespond("J") }
+        ]);
+
+        requestAnimationFrame(() => {
+          if (!warmup.running) {
             return;
           }
-          warmup.root = createRoot(warmup.stage);
-          drawTextStimulus(warmup.root, trial.char, trial.angle, trial.orientation);
-          warmup.messageEl.textContent = "请判断：正位(F) 或 镜像(J)";
-
-          setWarmupButtons([
-            { text: "F", onClick: () => warmupRespond("F") },
-            { text: "J", onClick: () => warmupRespond("J") }
-          ]);
-
-          requestAnimationFrame(() => {
-            if (!warmup.running || token !== warmup.flowToken) {
-              return;
-            }
-            warmup.onset = performance.now();
-            warmup.awaiting = true;
-          });
-        }, FIXATION_MS);
+          warmup.onset = performance.now();
+          warmup.awaiting = true;
+        });
       }
 
       function warmupAdvanceAfterCorrect() {
@@ -920,130 +920,53 @@
 
       function formalShowCharacterHeader() {
         const charNo = formal.charIndex + 1;
-        const ch = formalCurrentChar();
 
-        formal.characterLabelEl.textContent = `Character ${charNo} (${ch})`;
+        formal.characterLabelEl.textContent = `Character ${charNo}`;
         formal.modeLabelEl.textContent = formalModeText(formal.condition);
         formal.progressEl.textContent = `总进度 ${formal.responses.length} / 72`;
 
         formal.root = createRoot(formal.stage);
         drawCenteredText(formal.root, `Character ${charNo}`, 54);
 
-        formal.messageEl.textContent = "准备开始该字符的12个组合";
+        formal.messageEl.textContent = "";
       }
 
       function formalShowReadyState() {
         formal.phase = "ready";
         formal.awaiting = false;
         formal.doneArea.style.display = "none";
-
-        const cond = formal.condition;
         const trial = formalCurrentTrial();
-        const ch = formalCurrentChar();
-
-        if (cond === "N") {
-          formal.root = createRoot(formal.stage);
-          drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 52);
-          formal.messageEl.textContent = "ready";
-          setFormalButtons([
-            { text: "ready", onClick: () => formalPresentStimulus(trial) }
-          ]);
-          return;
-        }
-
-        if (cond === "I") {
-          formal.root = createRoot(formal.stage);
-          drawIdentityCue(formal.root, ch);
-          formal.messageEl.textContent = `Character ${formal.charIndex + 1} · 提示字符: ${ch}`;
-          setFormalButtons([
-            { text: "ready", onClick: () => formalPresentStimulus(trial) }
-          ]);
-          return;
-        }
-
-        formal.currentInformationTrial = trial;
-
-        if (cond === "O") {
-          formal.root = createRoot(formal.stage);
-          drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 52);
-          formal.messageEl.textContent = "点击 information 查看朝向";
-          setFormalButtons([
-            { text: "information", onClick: formalShowInformation }
-          ]);
-          return;
-        }
-
-        if (cond === "B") {
-          formal.root = createRoot(formal.stage);
-          drawIdentityCue(formal.root, ch);
-          formal.messageEl.textContent = `Character ${formal.charIndex + 1} · 字符提示: ${ch}`;
-          setFormalButtons([
-            { text: "information", onClick: formalShowInformation }
-          ]);
-          return;
-        }
-
-        if (cond === "C") {
-          formal.root = createRoot(formal.stage);
-          drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 52);
-          formal.messageEl.textContent = "点击 information 查看旋转字符（正面）";
-          setFormalButtons([
-            { text: "information", onClick: formalShowInformation }
-          ]);
-        }
-      }
-
-      function formalShowInformation() {
-        const trial = formal.currentInformationTrial || formalCurrentTrial();
         if (!trial) {
           return;
         }
 
-        const token = formal.flowToken;
-        formal.phase = "information";
-        formal.awaiting = false;
         formal.root = createRoot(formal.stage);
-
-        if (formal.condition === "O" || formal.condition === "B") {
-          drawArrowCue(formal.stage, formal.root, trial.angle);
-          formal.messageEl.textContent = `目标角度: ${trial.angle}°`;
-        } else if (formal.condition === "C") {
-          drawTextStimulus(formal.root, trial.char, trial.angle, "F");
-          formal.messageEl.textContent = `旋转字符提示: ${trial.char} @ ${trial.angle}°`;
-        }
-
-        setFormalButtons([]);
-
-        setTimeout(() => {
-          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
-            return;
+        drawCenteredText(formal.root, `Character ${formal.charIndex + 1}`, 54);
+        formal.messageEl.textContent = "";
+        setFormalButtons([
+          {
+            text: "start after information",
+            onClick: () => formalRunTrialSequence(trial)
           }
-          formal.root = createRoot(formal.stage);
-          drawCenteredText(formal.root, "ready", 54);
-          formal.messageEl.textContent = "信息已消失，请点击 ready";
-          setFormalButtons([
-            { text: "ready", onClick: () => formalPresentStimulus(trial) }
-          ]);
-        }, INFORMATION_MS);
+        ]);
       }
 
-      function formalPresentStimulus(trial) {
+      function formalRunTrialSequence(trial) {
         if (!trial) {
           return;
         }
+
         const token = formal.flowToken;
-        formal.phase = "fixation";
+        formal.phase = "cue";
         formal.awaiting = false;
         formal.activeStimulus = trial;
-        formal.root = createRoot(formal.stage);
-        showFixation(formal.root);
-        formal.messageEl.textContent = "注视点";
         setFormalButtons([]);
 
-        setTimeout(() => {
+        const showStimulus = () => {
           if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
             return;
           }
+
           formal.phase = "response";
           formal.root = createRoot(formal.stage);
           drawTextStimulus(formal.root, trial.char, trial.angle, trial.orientation);
@@ -1061,7 +984,87 @@
             formal.onset = performance.now();
             formal.awaiting = true;
           });
-        }, FIXATION_MS);
+        };
+
+        const showBlank = () => {
+          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+            return;
+          }
+
+          formal.root = createRoot(formal.stage);
+          formal.messageEl.textContent = "";
+        };
+
+        const showArrowCue = () => {
+          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+            return;
+          }
+
+          formal.root = createRoot(formal.stage);
+          drawArrowCue(formal.stage, formal.root, trial.angle);
+          formal.messageEl.textContent = "";
+        };
+
+        const showCharacterCue = () => {
+          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+            return;
+          }
+
+          formal.root = createRoot(formal.stage);
+          drawIdentityCue(formal.root, trial.char);
+          formal.messageEl.textContent = "";
+        };
+
+        const showOutlineCue = () => {
+          if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+            return;
+          }
+
+          formal.root = createRoot(formal.stage);
+          drawOutlineStimulus(formal.root, trial.char, trial.angle, trial.orientation);
+          formal.messageEl.textContent = "";
+        };
+
+        if (formal.condition === "N") {
+          showBlank();
+          setTimeout(showStimulus, INFORMATION_MS);
+          return;
+        }
+
+        if (formal.condition === "I") {
+          showCharacterCue();
+          setTimeout(showStimulus, INFORMATION_MS);
+          return;
+        }
+
+        if (formal.condition === "O") {
+          showArrowCue();
+          setTimeout(showStimulus, INFORMATION_MS);
+          return;
+        }
+
+        if (formal.condition === "B") {
+          showCharacterCue();
+          setTimeout(() => {
+            if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+              return;
+            }
+            showArrowCue();
+            setTimeout(showStimulus, 1000);
+          }, INFORMATION_MS);
+          return;
+        }
+
+        if (formal.condition === "C") {
+          showOutlineCue();
+          setTimeout(() => {
+            if (token !== formal.flowToken || formal.phase === "idle" || formal.phase === "done") {
+              return;
+            }
+            showBlank();
+            setTimeout(showStimulus, 1000);
+          }, INFORMATION_MS);
+        }
       }
 
       function formalAdvanceTrial() {
@@ -1152,7 +1155,7 @@
         formal.messageEl.textContent = "请先完成上方初始化";
 
         formal.root = createRoot(formal.stage);
-        drawCenteredText(formal.root, "Ready", 52);
+        drawCenteredText(formal.root, "请先完成上方初始化", 34);
         setFormalButtons([]);
       }
 
@@ -1531,13 +1534,13 @@
       warmup.root = createRoot(warmup.stage);
       drawCenteredText(warmup.root, "R", 72);
       formal.root = createRoot(formal.stage);
-      drawCenteredText(formal.root, "Ready", 52);
+      drawCenteredText(formal.root, "请先完成上方初始化", 34);
 
       renderInstructionExamples();
       resetWarmup();
       resetFormalAll();
       renderDataDashboard();
-      setGlobalStatus("Ready");
+      setGlobalStatus("就绪");
     })();
   </script>
 </body>
