@@ -918,12 +918,16 @@
         return map[cond] || "-";
       }
 
+      function formalUpdateProgress() {
+        formal.progressEl.textContent = `总进度 ${formal.responses.length} / 72`;
+      }
+
       function formalShowCharacterHeader() {
         const charNo = formal.charIndex + 1;
 
         formal.characterLabelEl.textContent = `Character ${charNo}`;
         formal.modeLabelEl.textContent = formalModeText(formal.condition);
-        formal.progressEl.textContent = `总进度 ${formal.responses.length} / 72`;
+        formalUpdateProgress();
 
         formal.root = createRoot(formal.stage);
         drawCenteredText(formal.root, `Character ${charNo}`, 54);
@@ -935,6 +939,12 @@
         formal.phase = "ready";
         formal.awaiting = false;
         formal.doneArea.style.display = "none";
+        formalUpdateProgress()
+      function formalShowReadyState() {
+        formal.phase = "ready";
+        formal.awaiting = false;
+        formal.doneArea.style.display = "none";
+        formalUpdateProgress();
         const trial = formalCurrentTrial();
         if (!trial) {
           return;
@@ -1076,6 +1086,7 @@
           if (formal.charIndex >= formal.charOrder.length) {
             formal.phase = "done";
             formal.awaiting = false;
+            formalUpdateProgress();
             formal.messageEl.textContent = "所有题目已完成";
             setFormalButtons([]);
             formal.doneArea.style.display = "flex";
