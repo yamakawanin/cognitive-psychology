@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Update current project to:
-https://github.com/yamakawanin/cognitive-psychology.git
+Update current project to your fork:
+https://github.com/xSuan-47/cognitive-psychology.git
 
 Usage:
   python3 update_to_github.py
   python3 update_to_github.py -m "feat: update experiment"
-  python3 update_to_github.py --remote-name cognitive --branch main
+  python3 update_to_github.py --remote-name origin --branch main
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_REMOTE_URL = "https://github.com/yamakawanin/cognitive-psychology.git"
-DEFAULT_REMOTE_NAME = "cognitive_psychology"
+DEFAULT_REMOTE_URL = "https://github.com/xSuan-47/cognitive-psychology.git"
+DEFAULT_REMOTE_NAME = "origin"
 DEFAULT_BRANCH = "main"
 
 
