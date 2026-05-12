@@ -136,6 +136,27 @@ def push(cwd: Path, remote_name: str, branch: str) -> None:
     print(f"[OK] Pushed to {remote_name}/{branch}")
 
 
+def remote_branch_exists(cwd: Path, remote_name: str, branch: str) -> bool:
+    result = run_git(["ls-remote", "--heads", remote_name, branch], cwd, check=False)
+    return bool(result.stdout.strip())
+
+
+def is_branch_ahead_of_remote(cwd: Path, remote_name: str, branch: str) -> bool:
+    if not remote_branch_exists(cwd, remote_name, branch):
+        return True
+
+    result = run_git(["rev-list", "--left-right", "--count", f"HEAD...{remote_name}/{branch}"], cwd, check=False)
+    if result.returncode != 0:
+        return True
+
+    parts = result.stdout.strip().split()
+    if len(parts) != 2:
+        return True
+
+    ahead = int(parts[0])
+    return ahead > 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Commit and push this project to GitHub.")
     parser.add_argument("-m", "--message", help="Commit message")
@@ -159,10 +180,10 @@ def main() -> None:
         ensure_branch(cwd, args.branch)
         ensure_remote(cwd, args.remote_name, args.repo_url)
         committed = stage_and_commit(cwd, commit_message)
-        if committed:
+        if committed or is_branch_ahead_of_remote(cwd, args.remote_name, args.branch):
             push(cwd, args.remote_name, args.branch)
         else:
-            print("[Info] Skipped push because there is no new commit.")
+            print("[Info] Skipped push because there is no new commit and local branch is not ahead of remote.")
     except subprocess.CalledProcessError as e:
         print("[Error] Git command failed:", "git", " ".join(e.cmd[1:]), file=sys.stderr)
         err = (e.stderr or "").strip()
