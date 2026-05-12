@@ -367,7 +367,7 @@
           <h1 class="title">Experiment instructions</h1>
           <p class="muted">
             显示屏上会闪现出字符或数字的不同形态，旋转角度以60°为单位，共六种；此外，字符和数字可能以正面或反面出现，共两种。一共有12种组合。
-            被试需要尽可能快地对正面/反面做出判断反应，并点击选项，正面选择F（正位），反面选择J（镜像），以下为示例图：
+            被试需要尽可能快地对正面/反面做出判断反应，并点击选项，正面选择F（正位），反面选择J（镜像）。可通过键盘上的F键和J键进行选择，按空格键进入下一题，以下为示例图：
           </p>
           <div id="instructionExamples" class="examples-grid"></div>
         </div>
@@ -918,7 +918,7 @@
         return map[cond] || "-";
       }
 
-      function formalUpdateProgress() {
+      function updateFormalProgress() {
         formal.progressEl.textContent = `总进度 ${formal.responses.length} / 72`;
       }
 
@@ -927,7 +927,7 @@
 
         formal.characterLabelEl.textContent = `Character ${charNo}`;
         formal.modeLabelEl.textContent = formalModeText(formal.condition);
-        formalUpdateProgress();
+        updateFormalProgress();
 
         formal.root = createRoot(formal.stage);
         drawCenteredText(formal.root, `Character ${charNo}`, 54);
@@ -939,7 +939,6 @@
         formal.phase = "ready";
         formal.awaiting = false;
         formal.doneArea.style.display = "none";
-        formalUpdateProgress();
         const trial = formalCurrentTrial();
         if (!trial) {
           return;
@@ -1081,7 +1080,6 @@
           if (formal.charIndex >= formal.charOrder.length) {
             formal.phase = "done";
             formal.awaiting = false;
-            formalUpdateProgress();
             formal.messageEl.textContent = "所有题目已完成";
             setFormalButtons([]);
             formal.doneArea.style.display = "flex";
@@ -1130,6 +1128,7 @@
               rt,
               timestamp: new Date().toISOString()
             });
+            updateFormalProgress();
             formalAdvanceTrial();
           } else {
             formalShowReadyState();
@@ -1421,6 +1420,23 @@
         downloadCsvFile(`${participantId}_${condition}.csv`, csv);
       }
 
+      function exportParticipantAll(participantId) {
+        const records = loadRecords();
+        const rows = [];
+        records.forEach((run) => {
+          if (run.participantId === participantId) {
+            run.responses.forEach((resp) => rows.push(resp));
+          }
+        });
+
+        if (!rows.length) {
+          return;
+        }
+
+        const csv = toCsv(rows);
+        downloadCsvFile(`${participantId}_all.csv`, csv);
+      }
+
       function deleteParticipantCondition(participantId, condition) {
         const records = loadRecords();
         const next = records.filter((run) => !(run.participantId === participantId && run.condition === condition));
@@ -1513,6 +1529,17 @@
           });
 
           card.appendChild(h);
+
+          const exportAllRow = document.createElement("div");
+          exportAllRow.className = "inline-row";
+          exportAllRow.style.marginTop = "10px";
+          const exportAllBtn = document.createElement("button");
+          exportAllBtn.textContent = "Export all CSV";
+          exportAllBtn.disabled = !runs.length;
+          exportAllBtn.addEventListener("click", () => exportParticipantAll(participantId));
+          exportAllRow.appendChild(exportAllBtn);
+          card.appendChild(exportAllRow);
+
           card.appendChild(chart);
           card.appendChild(actions);
 
@@ -1523,19 +1550,48 @@
         });
       }
 
-      function handleFormalKeyboard(e) {
-        if (formal.phase !== "response" || !formal.awaiting) {
+      function handleKeyboardResponse(e) {
+        const target = e.target;
+        if (
+          target &&
+          (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+        ) {
           return;
         }
+
         const k = e.key.toLowerCase();
-        if (k === "f") {
-          formalRespond("F");
-        } else if (k === "j") {
-          formalRespond("J");
+        if (k === " ") {
+          if (warmup.running && !warmup.awaiting && !warmup.done) {
+            e.preventDefault();
+            warmupPresentStimulus();
+            return;
+          }
+          if (formal.phase === "ready" && !formal.awaiting) {
+            e.preventDefault();
+            const trial = formalCurrentTrial();
+            if (trial) {
+              formalRunTrialSequence(trial);
+            }
+          }
+          return;
+        }
+
+        if (k !== "f" && k !== "j") {
+          return;
+        }
+
+        const choice = k.toUpperCase();
+        if (warmup.awaiting && warmup.running) {
+          warmupRespond(choice);
+          return;
+        }
+
+        if (formal.phase === "response" && formal.awaiting) {
+          formalRespond(choice);
         }
       }
 
-      window.addEventListener("keydown", handleFormalKeyboard, { passive: true });
+      window.addEventListener("keydown", handleKeyboardResponse, { passive: true });
 
       warmup.root = createRoot(warmup.stage);
       drawCenteredText(warmup.root, "R", 72);
