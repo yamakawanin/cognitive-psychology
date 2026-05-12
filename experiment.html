@@ -939,11 +939,6 @@
         formal.phase = "ready";
         formal.awaiting = false;
         formal.doneArea.style.display = "none";
-        formalUpdateProgress()
-      function formalShowReadyState() {
-        formal.phase = "ready";
-        formal.awaiting = false;
-        formal.doneArea.style.display = "none";
         formalUpdateProgress();
         const trial = formalCurrentTrial();
         if (!trial) {
