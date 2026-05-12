@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_REMOTE_URL = "https://github.com/xSuan-47/cognitive-psychology.git"
+DEFAULT_REMOTE_URL = "git@github.com:xSuan-47/cognitive-psychology.git"
 DEFAULT_REMOTE_NAME = "origin"
 DEFAULT_BRANCH = "main"
 
